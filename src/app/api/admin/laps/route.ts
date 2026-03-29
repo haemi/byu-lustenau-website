@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
         );
     }
 
-    const state = recordLap(registrationId, durationSeconds);
+    const state = await recordLap(registrationId, durationSeconds);
     return NextResponse.json(state);
 }
 
@@ -24,5 +24,5 @@ export async function GET(request: NextRequest) {
     const authError = verifyAdminAuth(request);
     if (authError) return authError;
 
-    return NextResponse.json(getRaceState());
+    return NextResponse.json(await getRaceState());
 }

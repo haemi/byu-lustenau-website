@@ -4,7 +4,7 @@ import { getResults } from "@/lib/laps";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-    const results = getResults();
+    const results = await getResults();
     if (!results) {
         return NextResponse.json(
             { error: "Rennen noch nicht beendet." },

@@ -1,8 +1,4 @@
-import { readFileSync, writeFileSync, existsSync } from "fs";
-import { join } from "path";
-
-const DATA_DIR = join(process.cwd(), "data");
-const DATA_FILE = join(DATA_DIR, "registrations.json");
+import { sql, ensureSchema } from "./db";
 
 const MAX_PARTICIPANTS = 50;
 
@@ -22,137 +18,189 @@ export interface Registration {
     registeredAt: string;
 }
 
-interface RegistrationStore {
-    registrations: Registration[];
-    nextBibNumber: number;
+function rowToRegistration(row: Record<string, unknown>): Registration {
+    return {
+        id: row.id as string,
+        bibNumber: row.bib_number as number | null,
+        firstName: row.first_name as string,
+        lastName: row.last_name as string,
+        email: row.email as string,
+        dateOfBirth: row.date_of_birth as string,
+        gender: row.gender as "male" | "female" | "other",
+        club: row.club as string,
+        emergencyContactName: row.emergency_contact_name as string,
+        emergencyContactPhone: row.emergency_contact_phone as string,
+        experience: row.experience as string,
+        status: row.status as "confirmed" | "waitlisted" | "cancelled",
+        registeredAt: row.registered_at instanceof Date
+            ? (row.registered_at as Date).toISOString()
+            : String(row.registered_at),
+    };
 }
 
-function ensureDataDir(): void {
-    const { mkdirSync } = require("fs");
-    if (!existsSync(DATA_DIR)) {
-        mkdirSync(DATA_DIR, { recursive: true });
-    }
+export async function getRegistrations(): Promise<Registration[]> {
+    await ensureSchema();
+    const { rows } = await sql`SELECT * FROM registrations ORDER BY registered_at ASC`;
+    return rows.map(rowToRegistration);
 }
 
-function readStore(): RegistrationStore {
-    ensureDataDir();
-    if (!existsSync(DATA_FILE)) {
-        return { registrations: [], nextBibNumber: 1 };
-    }
-    const raw = readFileSync(DATA_FILE, "utf-8");
-    return JSON.parse(raw);
+export async function getRegistrationByEmail(email: string): Promise<Registration | undefined> {
+    await ensureSchema();
+    const { rows } = await sql`
+        SELECT * FROM registrations
+        WHERE LOWER(email) = LOWER(${email}) AND status != 'cancelled'
+        LIMIT 1
+    `;
+    return rows.length > 0 ? rowToRegistration(rows[0]) : undefined;
 }
 
-function writeStore(store: RegistrationStore): void {
-    ensureDataDir();
-    writeFileSync(DATA_FILE, JSON.stringify(store, null, 2), "utf-8");
+export async function getConfirmedCount(): Promise<number> {
+    await ensureSchema();
+    const { rows } = await sql`SELECT COUNT(*)::int AS count FROM registrations WHERE status = 'confirmed'`;
+    return rows[0].count;
 }
 
-export function getRegistrations(): Registration[] {
-    return readStore().registrations;
+export async function getWaitlistCount(): Promise<number> {
+    await ensureSchema();
+    const { rows } = await sql`SELECT COUNT(*)::int AS count FROM registrations WHERE status = 'waitlisted'`;
+    return rows[0].count;
 }
 
-export function getRegistrationByEmail(email: string): Registration | undefined {
-    return readStore().registrations.find(
-        (r) => r.email.toLowerCase() === email.toLowerCase() && r.status !== "cancelled"
-    );
-}
-
-export function getConfirmedCount(): number {
-    return readStore().registrations.filter((r) => r.status === "confirmed").length;
-}
-
-export function getWaitlistCount(): number {
-    return readStore().registrations.filter((r) => r.status === "waitlisted").length;
-}
-
-export function addRegistration(
+export async function addRegistration(
     data: Omit<Registration, "id" | "bibNumber" | "status" | "registeredAt">
-): Registration {
-    const store = readStore();
-    const confirmedCount = store.registrations.filter((r) => r.status === "confirmed").length;
+): Promise<Registration> {
+    await ensureSchema();
+
+    const confirmedCount = await getConfirmedCount();
     const isWaitlisted = confirmedCount >= MAX_PARTICIPANTS;
 
-    const registration: Registration = {
-        ...data,
-        id: crypto.randomUUID(),
-        bibNumber: isWaitlisted ? null : store.nextBibNumber,
-        status: isWaitlisted ? "waitlisted" : "confirmed",
-        registeredAt: new Date().toISOString(),
-    };
-
+    let bibNumber: number | null = null;
     if (!isWaitlisted) {
-        store.nextBibNumber++;
+        const { rows } = await sql`
+            UPDATE race_state SET next_bib_number = next_bib_number + 1
+            WHERE id = 1
+            RETURNING next_bib_number - 1 AS bib
+        `;
+        bibNumber = rows[0].bib;
     }
 
-    store.registrations.push(registration);
-    writeStore(store);
-    return registration;
+    const status = isWaitlisted ? "waitlisted" : "confirmed";
+
+    const { rows } = await sql`
+        INSERT INTO registrations (
+            first_name, last_name, email, date_of_birth, gender,
+            club, emergency_contact_name, emergency_contact_phone,
+            experience, status, bib_number
+        ) VALUES (
+            ${data.firstName}, ${data.lastName}, ${data.email}, ${data.dateOfBirth}, ${data.gender},
+            ${data.club}, ${data.emergencyContactName}, ${data.emergencyContactPhone},
+            ${data.experience}, ${status}, ${bibNumber}
+        )
+        RETURNING *
+    `;
+
+    return rowToRegistration(rows[0]);
 }
 
-export function cancelRegistration(id: string): Registration | null {
-    const store = readStore();
-    const reg = store.registrations.find((r) => r.id === id);
-    if (!reg || reg.status === "cancelled") return null;
+export async function cancelRegistration(id: string): Promise<Registration | null> {
+    await ensureSchema();
 
-    const wasBibbed = reg.bibNumber !== null;
-    reg.status = "cancelled";
-    reg.bibNumber = null;
+    const { rows: current } = await sql`SELECT * FROM registrations WHERE id = ${id}`;
+    if (current.length === 0 || current[0].status === "cancelled") return null;
 
-    // Promote first waitlisted runner if a confirmed spot opened
+    const wasBibbed = current[0].bib_number !== null;
+
+    await sql`
+        UPDATE registrations SET status = 'cancelled', bib_number = NULL
+        WHERE id = ${id}
+    `;
+
     if (wasBibbed) {
-        const firstWaitlisted = store.registrations.find((r) => r.status === "waitlisted");
-        if (firstWaitlisted) {
-            firstWaitlisted.status = "confirmed";
-            firstWaitlisted.bibNumber = store.nextBibNumber;
-            store.nextBibNumber++;
+        const { rows: waitlisted } = await sql`
+            SELECT id FROM registrations
+            WHERE status = 'waitlisted'
+            ORDER BY registered_at ASC
+            LIMIT 1
+        `;
+        if (waitlisted.length > 0) {
+            const { rows: bibRows } = await sql`
+                UPDATE race_state SET next_bib_number = next_bib_number + 1
+                WHERE id = 1
+                RETURNING next_bib_number - 1 AS bib
+            `;
+            await sql`
+                UPDATE registrations
+                SET status = 'confirmed', bib_number = ${bibRows[0].bib}
+                WHERE id = ${waitlisted[0].id}
+            `;
         }
     }
 
-    writeStore(store);
-    return reg;
+    const { rows: updated } = await sql`SELECT * FROM registrations WHERE id = ${id}`;
+    return rowToRegistration(updated[0]);
 }
 
-export function updateRegistrationStatus(
+export async function updateRegistrationStatus(
     id: string,
     newStatus: "confirmed" | "waitlisted" | "cancelled"
-): Registration | null {
-    const store = readStore();
-    const reg = store.registrations.find((r) => r.id === id);
-    if (!reg) return null;
+): Promise<Registration | null> {
+    await ensureSchema();
 
-    const oldStatus = reg.status;
-    if (oldStatus === newStatus) return reg;
+    const { rows } = await sql`SELECT * FROM registrations WHERE id = ${id}`;
+    if (rows.length === 0) return null;
+
+    const oldStatus = rows[0].status as string;
+    if (oldStatus === newStatus) return rowToRegistration(rows[0]);
 
     if (newStatus === "cancelled") {
         return cancelRegistration(id);
     }
 
     if (newStatus === "confirmed" && oldStatus !== "confirmed") {
-        reg.status = "confirmed";
-        reg.bibNumber = store.nextBibNumber;
-        store.nextBibNumber++;
+        const { rows: bibRows } = await sql`
+            UPDATE race_state SET next_bib_number = next_bib_number + 1
+            WHERE id = 1
+            RETURNING next_bib_number - 1 AS bib
+        `;
+        await sql`
+            UPDATE registrations SET status = 'confirmed', bib_number = ${bibRows[0].bib}
+            WHERE id = ${id}
+        `;
     } else if (newStatus === "waitlisted") {
-        const hadBib = reg.bibNumber !== null;
-        reg.status = "waitlisted";
-        reg.bibNumber = null;
+        const hadBib = rows[0].bib_number !== null;
+        await sql`
+            UPDATE registrations SET status = 'waitlisted', bib_number = NULL
+            WHERE id = ${id}
+        `;
 
         if (hadBib) {
-            const firstWaitlisted = store.registrations.find(
-                (r) => r.id !== id && r.status === "waitlisted"
-            );
-            if (firstWaitlisted) {
-                firstWaitlisted.status = "confirmed";
-                firstWaitlisted.bibNumber = store.nextBibNumber;
-                store.nextBibNumber++;
+            const { rows: waitlisted } = await sql`
+                SELECT id FROM registrations
+                WHERE id != ${id} AND status = 'waitlisted'
+                ORDER BY registered_at ASC
+                LIMIT 1
+            `;
+            if (waitlisted.length > 0) {
+                const { rows: bibRows } = await sql`
+                    UPDATE race_state SET next_bib_number = next_bib_number + 1
+                    WHERE id = 1
+                    RETURNING next_bib_number - 1 AS bib
+                `;
+                await sql`
+                    UPDATE registrations
+                    SET status = 'confirmed', bib_number = ${bibRows[0].bib}
+                    WHERE id = ${waitlisted[0].id}
+                `;
             }
         }
     }
 
-    writeStore(store);
-    return reg;
+    const { rows: updated } = await sql`SELECT * FROM registrations WHERE id = ${id}`;
+    return rowToRegistration(updated[0]);
 }
 
-export function getRegistrationById(id: string): Registration | undefined {
-    return readStore().registrations.find((r) => r.id === id);
+export async function getRegistrationById(id: string): Promise<Registration | undefined> {
+    await ensureSchema();
+    const { rows } = await sql`SELECT * FROM registrations WHERE id = ${id}`;
+    return rows.length > 0 ? rowToRegistration(rows[0]) : undefined;
 }
