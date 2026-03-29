@@ -166,6 +166,91 @@ export function resetRace(): RaceState {
     return state;
 }
 
+export interface ResultEntry {
+    rank: number;
+    bibNumber: number;
+    firstName: string;
+    lastName: string;
+    club: string;
+    completedLaps: number;
+    totalDistanceKm: number;
+    isWinner: boolean;
+    dnfAfterLap: number | null;
+}
+
+export interface RaceResults {
+    race: {
+        status: string;
+        startedAt: string | null;
+        finishedAt: string | null;
+        totalYards: number;
+    };
+    statistics: {
+        totalRunners: number;
+        finishers: number;
+        dnfCount: number;
+        averageLaps: number;
+        maxLaps: number;
+        totalDistanceAllRunnersKm: number;
+    };
+    results: ResultEntry[];
+}
+
+const LAP_DISTANCE_KM = 6.706;
+
+export function getResults(): RaceResults | null {
+    const state = readRace();
+    if (state.status !== "finished" || state.runners.length === 0) return null;
+
+    const sorted = [...state.runners].sort((a, b) => {
+        if (b.laps.length !== a.laps.length) return b.laps.length - a.laps.length;
+        if (a.status === "active" && b.status !== "active") return -1;
+        if (a.status !== "active" && b.status === "active") return 1;
+        return a.bibNumber - b.bibNumber;
+    });
+
+    const maxLaps = sorted.length > 0 ? sorted[0].laps.length : 0;
+    const totalLapsAll = sorted.reduce((sum, r) => sum + r.laps.length, 0);
+    const dnfCount = sorted.filter((r) => r.status === "dnf").length;
+
+    const results: ResultEntry[] = sorted.map((r, idx) => ({
+        rank: idx + 1,
+        bibNumber: r.bibNumber,
+        firstName: r.firstName,
+        lastName: r.lastName,
+        club: r.club,
+        completedLaps: r.laps.length,
+        totalDistanceKm: Math.round(r.laps.length * LAP_DISTANCE_KM * 10) / 10,
+        isWinner: r.status === "active" && r.laps.length === maxLaps,
+        dnfAfterLap: r.dnfAfterLap,
+    }));
+
+    return {
+        race: {
+            status: state.status,
+            startedAt: state.startedAt,
+            finishedAt: state.finishedAt,
+            totalYards: state.currentYard,
+        },
+        statistics: {
+            totalRunners: state.runners.length,
+            finishers: state.runners.filter((r) => r.status === "active").length,
+            dnfCount,
+            averageLaps: state.runners.length > 0 ? Math.round((totalLapsAll / state.runners.length) * 10) / 10 : 0,
+            maxLaps,
+            totalDistanceAllRunnersKm: Math.round(totalLapsAll * LAP_DISTANCE_KM * 10) / 10,
+        },
+        results,
+    };
+}
+
+export function getRunnerByBib(bibNumber: number): { runner: Runner; registrationId: string } | null {
+    const state = readRace();
+    const runner = state.runners.find((r) => r.bibNumber === bibNumber);
+    if (!runner) return null;
+    return { runner, registrationId: runner.registrationId };
+}
+
 export interface LeaderboardEntry {
     bibNumber: number;
     firstName: string;
