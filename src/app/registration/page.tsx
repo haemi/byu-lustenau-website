@@ -17,6 +17,18 @@ interface FormData {
     agreeTerms: boolean;
 }
 
+interface FieldError {
+    field: string;
+    message: string;
+}
+
+interface RegistrationResult {
+    firstName: string;
+    lastName: string;
+    bibNumber: number | null;
+    status: "confirmed" | "waitlisted";
+}
+
 const initialFormData: FormData = {
     firstName: "",
     lastName: "",
@@ -32,7 +44,10 @@ const initialFormData: FormData = {
 
 export default function RegistrationPage() {
     const [formData, setFormData] = useState<FormData>(initialFormData);
-    const [submitted, setSubmitted] = useState(false);
+    const [result, setResult] = useState<RegistrationResult | null>(null);
+    const [fieldErrors, setFieldErrors] = useState<FieldError[]>([]);
+    const [generalError, setGeneralError] = useState("");
+    const [submitting, setSubmitting] = useState(false);
 
     function handleChange(
         e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -43,16 +58,46 @@ export default function RegistrationPage() {
                 ? target.checked
                 : target.value;
         setFormData((prev) => ({ ...prev, [target.name]: value }));
+        setFieldErrors((prev) => prev.filter((err) => err.field !== target.name));
+        setGeneralError("");
     }
 
-    function handleSubmit(e: React.FormEvent) {
+    function getFieldError(field: string): string | undefined {
+        return fieldErrors.find((e) => e.field === field)?.message;
+    }
+
+    async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-        // TODO: Send to backend API
-        console.log("Registration submitted:", formData);
-        setSubmitted(true);
+        setSubmitting(true);
+        setFieldErrors([]);
+        setGeneralError("");
+
+        try {
+            const res = await fetch("/api/registration", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(formData),
+            });
+
+            const data = await res.json();
+
+            if (res.status === 422 && data.errors) {
+                setFieldErrors(data.errors);
+            } else if (res.status === 409) {
+                setGeneralError(data.error || "Diese E-Mail ist bereits registriert.");
+            } else if (!res.ok) {
+                setGeneralError(data.error || "Ein Fehler ist aufgetreten. Bitte versuche es erneut.");
+            } else {
+                setResult(data.registration);
+            }
+        } catch {
+            setGeneralError("Verbindungsfehler. Bitte versuche es erneut.");
+        } finally {
+            setSubmitting(false);
+        }
     }
 
-    if (submitted) {
+    if (result) {
         return (
             <>
                 <Header />
@@ -64,11 +109,27 @@ export default function RegistrationPage() {
                             </svg>
                         </div>
                         <h1 className="font-heading text-3xl font-bold text-byu-black mb-4">
-                            Anmeldung erhalten!
+                            {result.status === "confirmed" ? "Anmeldung bestätigt!" : "Auf der Warteliste!"}
                         </h1>
-                        <p className="text-byu-black/70 text-lg">
-                            Danke, {formData.firstName}! Wir haben deine Anmeldung
-                            erhalten und melden uns per E-Mail bei dir.
+                        {result.status === "confirmed" ? (
+                            <>
+                                <p className="text-byu-black/70 text-lg mb-4">
+                                    Danke, {result.firstName}! Deine Anmeldung ist bestätigt.
+                                </p>
+                                <div className="bg-white rounded-xl p-6 shadow-sm inline-block">
+                                    <p className="text-sm text-byu-black/50 mb-1">Deine Startnummer</p>
+                                    <p className="text-5xl font-bold text-byu-green">{result.bibNumber}</p>
+                                </div>
+                            </>
+                        ) : (
+                            <p className="text-byu-black/70 text-lg">
+                                Danke, {result.firstName}! Alle Startplätze sind vergeben.
+                                Du stehst auf der Warteliste und wir melden uns,
+                                sobald ein Platz frei wird.
+                            </p>
+                        )}
+                        <p className="text-byu-black/50 text-sm mt-6">
+                            Du erhältst eine Bestätigung per E-Mail.
                         </p>
                     </div>
                 </main>
@@ -76,6 +137,11 @@ export default function RegistrationPage() {
             </>
         );
     }
+
+    const inputClass = (field: string) =>
+        `w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-byu-green focus:border-transparent outline-none transition ${
+            getFieldError(field) ? "border-red-400 bg-red-50" : "border-gray-200"
+        }`;
 
     return (
         <>
@@ -90,6 +156,12 @@ export default function RegistrationPage() {
                             Sichere dir deinen Startplatz beim BYU Lustenau Backyard Ultra.
                         </p>
                     </div>
+
+                    {generalError && (
+                        <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-5 py-4 rounded-xl text-sm">
+                            {generalError}
+                        </div>
+                    )}
 
                     <form
                         onSubmit={handleSubmit}
@@ -107,8 +179,11 @@ export default function RegistrationPage() {
                                     required
                                     value={formData.firstName}
                                     onChange={handleChange}
-                                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-byu-green focus:border-transparent outline-none transition"
+                                    className={inputClass("firstName")}
                                 />
+                                {getFieldError("firstName") && (
+                                    <p className="text-red-500 text-xs mt-1">{getFieldError("firstName")}</p>
+                                )}
                             </div>
                             <div>
                                 <label htmlFor="lastName" className="block text-sm font-semibold text-byu-black mb-1.5">
@@ -121,8 +196,11 @@ export default function RegistrationPage() {
                                     required
                                     value={formData.lastName}
                                     onChange={handleChange}
-                                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-byu-green focus:border-transparent outline-none transition"
+                                    className={inputClass("lastName")}
                                 />
+                                {getFieldError("lastName") && (
+                                    <p className="text-red-500 text-xs mt-1">{getFieldError("lastName")}</p>
+                                )}
                             </div>
                         </div>
 
@@ -137,8 +215,11 @@ export default function RegistrationPage() {
                                 required
                                 value={formData.email}
                                 onChange={handleChange}
-                                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-byu-green focus:border-transparent outline-none transition"
+                                className={inputClass("email")}
                             />
+                            {getFieldError("email") && (
+                                <p className="text-red-500 text-xs mt-1">{getFieldError("email")}</p>
+                            )}
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -153,8 +234,11 @@ export default function RegistrationPage() {
                                     required
                                     value={formData.dateOfBirth}
                                     onChange={handleChange}
-                                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-byu-green focus:border-transparent outline-none transition"
+                                    className={inputClass("dateOfBirth")}
                                 />
+                                {getFieldError("dateOfBirth") && (
+                                    <p className="text-red-500 text-xs mt-1">{getFieldError("dateOfBirth")}</p>
+                                )}
                             </div>
                             <div>
                                 <label htmlFor="gender" className="block text-sm font-semibold text-byu-black mb-1.5">
@@ -166,13 +250,16 @@ export default function RegistrationPage() {
                                     required
                                     value={formData.gender}
                                     onChange={handleChange}
-                                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-byu-green focus:border-transparent outline-none transition bg-white"
+                                    className={`${inputClass("gender")} bg-white`}
                                 >
                                     <option value="">Bitte wählen</option>
                                     <option value="male">Männlich</option>
                                     <option value="female">Weiblich</option>
                                     <option value="other">Divers</option>
                                 </select>
+                                {getFieldError("gender") && (
+                                    <p className="text-red-500 text-xs mt-1">{getFieldError("gender")}</p>
+                                )}
                             </div>
                         </div>
 
@@ -187,7 +274,7 @@ export default function RegistrationPage() {
                                 value={formData.club}
                                 onChange={handleChange}
                                 placeholder="Optional"
-                                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-byu-green focus:border-transparent outline-none transition"
+                                className={inputClass("club")}
                             />
                         </div>
 
@@ -207,8 +294,11 @@ export default function RegistrationPage() {
                                         required
                                         value={formData.emergencyContactName}
                                         onChange={handleChange}
-                                        className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-byu-green focus:border-transparent outline-none transition"
+                                        className={inputClass("emergencyContactName")}
                                     />
+                                    {getFieldError("emergencyContactName") && (
+                                        <p className="text-red-500 text-xs mt-1">{getFieldError("emergencyContactName")}</p>
+                                    )}
                                 </div>
                                 <div>
                                     <label htmlFor="emergencyContactPhone" className="block text-sm font-semibold text-byu-black mb-1.5">
@@ -221,8 +311,11 @@ export default function RegistrationPage() {
                                         required
                                         value={formData.emergencyContactPhone}
                                         onChange={handleChange}
-                                        className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-byu-green focus:border-transparent outline-none transition"
+                                        className={inputClass("emergencyContactPhone")}
                                     />
+                                    {getFieldError("emergencyContactPhone") && (
+                                        <p className="text-red-500 text-xs mt-1">{getFieldError("emergencyContactPhone")}</p>
+                                    )}
                                 </div>
                             </div>
                         </fieldset>
@@ -238,7 +331,7 @@ export default function RegistrationPage() {
                                 value={formData.experience}
                                 onChange={handleChange}
                                 placeholder="Erzähl uns kurz von deiner Lauferfahrung (optional)"
-                                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-byu-green focus:border-transparent outline-none transition resize-none"
+                                className={`${inputClass("experience")} resize-none`}
                             />
                         </div>
 
@@ -260,9 +353,10 @@ export default function RegistrationPage() {
 
                         <button
                             type="submit"
-                            className="w-full bg-byu-green text-white font-bold py-4 rounded-lg text-lg hover:bg-byu-green-dark transition-colors shadow-sm"
+                            disabled={submitting}
+                            className="w-full bg-byu-green text-white font-bold py-4 rounded-lg text-lg hover:bg-byu-green-dark transition-colors shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
                         >
-                            Anmeldung absenden
+                            {submitting ? "Wird gesendet..." : "Anmeldung absenden"}
                         </button>
                     </form>
                 </div>
