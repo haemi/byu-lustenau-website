@@ -112,3 +112,47 @@ export function cancelRegistration(id: string): Registration | null {
     writeStore(store);
     return reg;
 }
+
+export function updateRegistrationStatus(
+    id: string,
+    newStatus: "confirmed" | "waitlisted" | "cancelled"
+): Registration | null {
+    const store = readStore();
+    const reg = store.registrations.find((r) => r.id === id);
+    if (!reg) return null;
+
+    const oldStatus = reg.status;
+    if (oldStatus === newStatus) return reg;
+
+    if (newStatus === "cancelled") {
+        return cancelRegistration(id);
+    }
+
+    if (newStatus === "confirmed" && oldStatus !== "confirmed") {
+        reg.status = "confirmed";
+        reg.bibNumber = store.nextBibNumber;
+        store.nextBibNumber++;
+    } else if (newStatus === "waitlisted") {
+        const hadBib = reg.bibNumber !== null;
+        reg.status = "waitlisted";
+        reg.bibNumber = null;
+
+        if (hadBib) {
+            const firstWaitlisted = store.registrations.find(
+                (r) => r.id !== id && r.status === "waitlisted"
+            );
+            if (firstWaitlisted) {
+                firstWaitlisted.status = "confirmed";
+                firstWaitlisted.bibNumber = store.nextBibNumber;
+                store.nextBibNumber++;
+            }
+        }
+    }
+
+    writeStore(store);
+    return reg;
+}
+
+export function getRegistrationById(id: string): Registration | undefined {
+    return readStore().registrations.find((r) => r.id === id);
+}
