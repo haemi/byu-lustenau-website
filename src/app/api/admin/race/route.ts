@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     const authError = verifyAdminAuth(request);
     if (authError) return authError;
 
-    return NextResponse.json(getRaceState());
+    return NextResponse.json(await getRaceState());
 }
 
 export async function POST(request: NextRequest) {
@@ -32,10 +32,10 @@ export async function POST(request: NextRequest) {
                     { status: 400 }
                 );
             }
-            return NextResponse.json(startRace(registrationIds));
+            return NextResponse.json(await startRace(registrationIds));
         }
         case "advance_yard":
-            return NextResponse.json(advanceYard());
+            return NextResponse.json(await advanceYard());
         case "dnf": {
             const { registrationId } = body;
             if (!registrationId) {
@@ -44,12 +44,12 @@ export async function POST(request: NextRequest) {
                     { status: 400 }
                 );
             }
-            return NextResponse.json(markDNF(registrationId));
+            return NextResponse.json(await markDNF(registrationId));
         }
         case "finish":
-            return NextResponse.json(finishRace());
+            return NextResponse.json(await finishRace());
         case "reset":
-            return NextResponse.json(resetRace());
+            return NextResponse.json(await resetRace());
         default:
             return NextResponse.json(
                 { error: "Unknown action. Use: start, advance_yard, dnf, finish, reset" },

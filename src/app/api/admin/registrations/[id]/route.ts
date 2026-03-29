@@ -11,7 +11,7 @@ export async function PATCH(
 
     const { id } = await params;
 
-    const existing = getRegistrationById(id);
+    const existing = await getRegistrationById(id);
     if (!existing) {
         return NextResponse.json({ error: "Registrierung nicht gefunden." }, { status: 404 });
     }
@@ -34,7 +34,7 @@ export async function PATCH(
         );
     }
 
-    const updated = updateRegistrationStatus(
+    const updated = await updateRegistrationStatus(
         id,
         newStatus as "confirmed" | "waitlisted" | "cancelled"
     );

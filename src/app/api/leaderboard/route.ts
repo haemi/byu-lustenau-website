@@ -4,5 +4,5 @@ import { getLeaderboard } from "@/lib/laps";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-    return NextResponse.json(getLeaderboard());
+    return NextResponse.json(await getLeaderboard());
 }

@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ errors }, { status: 422 });
     }
 
-    const existing = getRegistrationByEmail(input.email);
+    const existing = await getRegistrationByEmail(input.email);
     if (existing) {
         return NextResponse.json(
             { error: "Diese E-Mail-Adresse ist bereits registriert." },
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
         );
     }
 
-    const registration = addRegistration({
+    const registration = await addRegistration({
         firstName: input.firstName,
         lastName: input.lastName,
         email: input.email,
@@ -93,11 +93,11 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const registrations = getRegistrations();
+    const registrations = await getRegistrations();
     return NextResponse.json({
         total: registrations.length,
-        confirmed: getConfirmedCount(),
-        waitlisted: getWaitlistCount(),
+        confirmed: await getConfirmedCount(),
+        waitlisted: await getWaitlistCount(),
         registrations,
     });
 }

@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search")?.toLowerCase();
     const format = searchParams.get("format");
 
-    let registrations = getRegistrations();
+    let registrations = await getRegistrations();
 
     if (status && status !== "all") {
         registrations = registrations.filter((r) => r.status === status);
@@ -39,11 +39,12 @@ export async function GET(request: NextRequest) {
         });
     }
 
+    const allRegistrations = await getRegistrations();
     return NextResponse.json({
-        total: getRegistrations().length,
-        confirmed: getConfirmedCount(),
-        waitlisted: getWaitlistCount(),
-        cancelled: getRegistrations().filter((r) => r.status === "cancelled").length,
+        total: allRegistrations.length,
+        confirmed: await getConfirmedCount(),
+        waitlisted: await getWaitlistCount(),
+        cancelled: allRegistrations.filter((r) => r.status === "cancelled").length,
         registrations,
     });
 }
