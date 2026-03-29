@@ -8,6 +8,7 @@ const navLinks = [
     { href: "/#about", label: "Über das Rennen" },
     { href: "/#details", label: "Details" },
     { href: "/#location", label: "Ort" },
+    { href: "/leaderboard", label: "Leaderboard" },
     { href: "/registration", label: "Anmeldung" },
 ];
 
