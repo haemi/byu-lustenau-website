@@ -9,6 +9,7 @@ const navLinks = [
     { href: "/#details", label: "Details" },
     { href: "/#location", label: "Ort" },
     { href: "/leaderboard", label: "Leaderboard" },
+    { href: "/ergebnisse", label: "Ergebnisse" },
     { href: "/registration", label: "Anmeldung" },
 ];
 

@@ -33,6 +33,11 @@ export default function Footer() {
                                     Anmeldung
                                 </Link>
                             </li>
+                            <li>
+                                <Link href="/ergebnisse" className="hover:text-byu-gold transition-colors">
+                                    Ergebnisse
+                                </Link>
+                            </li>
                         </ul>
                     </div>
                     <div>
