@@ -7,6 +7,7 @@ import {
     getConfirmedCount,
     getWaitlistCount,
 } from "@/lib/registrations";
+import { sendConfirmationEmail } from "@/lib/email";
 
 export async function POST(request: NextRequest) {
     let body: Record<string, unknown>;
@@ -56,11 +57,18 @@ export async function POST(request: NextRequest) {
         experience: input.experience,
     });
 
-    // TODO: Send confirmation email (needs email service decision from CEO)
     console.log(
         `[Registration] ${registration.firstName} ${registration.lastName} — ` +
         `Status: ${registration.status}, Bib: ${registration.bibNumber ?? "waitlisted"}`
     );
+
+    sendConfirmationEmail({
+        email: registration.email,
+        firstName: registration.firstName,
+        lastName: registration.lastName,
+        bibNumber: registration.bibNumber,
+        status: registration.status as "confirmed" | "waitlisted",
+    });
 
     return NextResponse.json(
         {
