@@ -37,51 +37,59 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ errors }, { status: 422 });
     }
 
-    const existing = await getRegistrationByEmail(input.email);
-    if (existing) {
+    try {
+        const existing = await getRegistrationByEmail(input.email);
+        if (existing) {
+            return NextResponse.json(
+                { error: "Diese E-Mail-Adresse ist bereits registriert." },
+                { status: 409 }
+            );
+        }
+
+        const registration = await addRegistration({
+            firstName: input.firstName,
+            lastName: input.lastName,
+            email: input.email,
+            dateOfBirth: input.dateOfBirth,
+            gender: input.gender as "male" | "female" | "other",
+            club: input.club,
+            emergencyContactName: input.emergencyContactName,
+            emergencyContactPhone: input.emergencyContactPhone,
+            experience: input.experience,
+        });
+
+        console.log(
+            `[Registration] ${registration.firstName} ${registration.lastName} — ` +
+            `Status: ${registration.status}, Bib: ${registration.bibNumber ?? "waitlisted"}`
+        );
+
+        sendConfirmationEmail({
+            email: registration.email,
+            firstName: registration.firstName,
+            lastName: registration.lastName,
+            bibNumber: registration.bibNumber,
+            status: registration.status as "confirmed" | "waitlisted",
+        });
+
         return NextResponse.json(
-            { error: "Diese E-Mail-Adresse ist bereits registriert." },
-            { status: 409 }
+            {
+                registration: {
+                    id: registration.id,
+                    firstName: registration.firstName,
+                    lastName: registration.lastName,
+                    bibNumber: registration.bibNumber,
+                    status: registration.status,
+                },
+            },
+            { status: 201 }
+        );
+    } catch (error) {
+        console.error("[Registration API]", error);
+        return NextResponse.json(
+            { error: "Interner Fehler bei der Registrierung." },
+            { status: 500 }
         );
     }
-
-    const registration = await addRegistration({
-        firstName: input.firstName,
-        lastName: input.lastName,
-        email: input.email,
-        dateOfBirth: input.dateOfBirth,
-        gender: input.gender as "male" | "female" | "other",
-        club: input.club,
-        emergencyContactName: input.emergencyContactName,
-        emergencyContactPhone: input.emergencyContactPhone,
-        experience: input.experience,
-    });
-
-    console.log(
-        `[Registration] ${registration.firstName} ${registration.lastName} — ` +
-        `Status: ${registration.status}, Bib: ${registration.bibNumber ?? "waitlisted"}`
-    );
-
-    sendConfirmationEmail({
-        email: registration.email,
-        firstName: registration.firstName,
-        lastName: registration.lastName,
-        bibNumber: registration.bibNumber,
-        status: registration.status as "confirmed" | "waitlisted",
-    });
-
-    return NextResponse.json(
-        {
-            registration: {
-                id: registration.id,
-                firstName: registration.firstName,
-                lastName: registration.lastName,
-                bibNumber: registration.bibNumber,
-                status: registration.status,
-            },
-        },
-        { status: 201 }
-    );
 }
 
 export async function GET(request: NextRequest) {

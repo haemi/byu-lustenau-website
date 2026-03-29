@@ -4,5 +4,13 @@ import { getLeaderboard } from "@/lib/laps";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-    return NextResponse.json(await getLeaderboard());
+    try {
+        return NextResponse.json(await getLeaderboard());
+    } catch (error) {
+        console.error("[Leaderboard API]", error);
+        return NextResponse.json(
+            { error: "Interner Fehler beim Laden des Leaderboards." },
+            { status: 500 }
+        );
+    }
 }
