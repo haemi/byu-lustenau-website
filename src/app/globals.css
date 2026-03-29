@@ -1,0 +1,20 @@
+@import "tailwindcss";
+
+@theme {
+    --color-byu-green: #2E7D32;
+    --color-byu-green-dark: #1B5E20;
+    --color-byu-blue: #1565C0;
+    --color-byu-blue-dark: #0D47A1;
+    --color-byu-gold: #F9A825;
+    --color-byu-gold-dark: #F57F17;
+    --color-byu-black: #1A1A1A;
+    --color-byu-white: #FAFAFA;
+    --color-byu-gray: #F5F5F5;
+
+    --font-heading: "Georgia", serif;
+    --font-body: system-ui, -apple-system, sans-serif;
+}
+
+html {
+    scroll-behavior: smooth;
+}
