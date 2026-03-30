@@ -1,6 +1,6 @@
 import { sql, ensureSchema } from "./db";
 
-const MAX_PARTICIPANTS = 50;
+const MAX_PARTICIPANTS = 100;
 
 export interface Registration {
     id: string;
