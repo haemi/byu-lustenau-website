@@ -1,0 +1,2206 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BYU Lustenau 2027 — Wie weit gehst du?</title>
+    <meta name="description" content="Backyard Ultra am Vetterhof in Lustenau. Voraussichtlich 23. April 2027. 100 Plätze. Eine Runde pro Stunde. Bis nur noch eine Person steht.">
+    <link rel="icon" type="image/png" href="assets/logos/logo-byu.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <style>
+        :root {
+            --bg: #f6f1e7;
+            --bg-warm: #efe6d2;
+            --ink: #1d2419;
+            --ink-soft: #4a513f;
+            --muted: #7a7666;
+            --line: #d9cfb8;
+            --forest: #2d4a2b;
+            --forest-deep: #1b2f1a;
+            --moss: #5a7a3e;
+            --terracotta: #c2562b;
+            --terracotta-deep: #963f1c;
+            --gold: #d6a74a;
+            --cream: #fbf8f0;
+            --shadow: 0 30px 60px -30px rgba(29, 36, 25, 0.25);
+            --radius: 18px;
+            --serif: 'Fraunces', Georgia, serif;
+            --sans: 'Inter', system-ui, sans-serif;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: var(--sans);
+            color: var(--ink);
+            background: var(--bg);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+        img { max-width: 100%; display: block; }
+        a { color: inherit; text-decoration: none; }
+        button { font: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+
+        .container {
+            max-width: 1240px;
+            margin: 0 auto;
+            padding: 0 28px;
+        }
+
+        /* ---------- NAV ---------- */
+        .nav {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 100;
+            padding: 18px 0;
+            transition: all .4s ease;
+            background: rgba(246, 241, 231, 0);
+        }
+        .nav.scrolled {
+            background: rgba(246, 241, 231, 0.92);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            padding: 12px 0;
+            border-bottom: 1px solid var(--line);
+        }
+        .nav-inner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 24px;
+        }
+        .nav-logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-family: var(--serif);
+            font-weight: 800;
+            font-size: 19px;
+            letter-spacing: -0.01em;
+        }
+        .nav-logo img { height: 38px; width: 38px; border-radius: 50%; }
+        .nav-links {
+            display: flex;
+            gap: 32px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .nav-links a {
+            position: relative;
+            transition: color .2s;
+        }
+        .nav-links a:hover { color: var(--terracotta); }
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .lang-switch {
+            display: flex;
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            overflow: hidden;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .lang-switch button {
+            padding: 6px 12px;
+            color: var(--muted);
+            transition: all .2s;
+        }
+        .lang-switch button.active {
+            background: var(--ink);
+            color: var(--cream);
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 13px 24px;
+            border-radius: 999px;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all .25s ease;
+            white-space: nowrap;
+        }
+        .btn-primary {
+            background: var(--terracotta);
+            color: var(--cream);
+            box-shadow: 0 8px 24px -8px rgba(194, 86, 43, 0.5);
+        }
+        .btn-primary:hover {
+            background: var(--terracotta-deep);
+            transform: translateY(-2px);
+            box-shadow: 0 12px 28px -8px rgba(194, 86, 43, 0.6);
+        }
+        .btn-ghost {
+            background: transparent;
+            color: var(--ink);
+            border: 1.5px solid var(--ink);
+        }
+        .btn-ghost:hover { background: var(--ink); color: var(--cream); }
+        .btn-light {
+            background: var(--cream);
+            color: var(--forest-deep);
+        }
+        .btn-light:hover { transform: translateY(-2px); }
+        .nav-toggle {
+            display: none;
+            font-size: 24px;
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            border: 1px solid var(--line);
+            align-items: center;
+            justify-content: center;
+            transition: all .2s;
+        }
+        .nav-toggle:hover { background: var(--ink); color: var(--cream); }
+        .mobile-menu {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            background: var(--bg);
+            padding: 90px 28px 32px;
+            transform: translateY(-100%);
+            transition: transform .4s ease;
+            z-index: 99;
+            border-bottom: 1px solid var(--line);
+            box-shadow: 0 20px 40px -20px rgba(0,0,0,0.15);
+        }
+        .mobile-menu.open { transform: translateY(0); }
+        .mobile-menu ul {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-bottom: 24px;
+        }
+        .mobile-menu a {
+            display: block;
+            padding: 16px 8px;
+            font-family: var(--serif);
+            font-size: 22px;
+            font-weight: 600;
+            color: var(--forest-deep);
+            border-bottom: 1px solid var(--line);
+        }
+        .mobile-menu .btn { width: 100%; justify-content: center; }
+
+        /* ---------- HERO ---------- */
+        .hero {
+            position: relative;
+            padding: 140px 0 0;
+            overflow: hidden;
+            background:
+                radial-gradient(ellipse at 80% 0%, rgba(90, 122, 62, 0.15), transparent 50%),
+                radial-gradient(ellipse at 0% 100%, rgba(214, 167, 74, 0.12), transparent 50%),
+                var(--bg);
+        }
+        .hero::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='0.9' /%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23n)' opacity='0.15'/%3E%3C/svg%3E");
+            opacity: 0.4;
+            pointer-events: none;
+            mix-blend-mode: multiply;
+        }
+        .hero-grid {
+            display: grid;
+            grid-template-columns: 1.15fr 1fr;
+            gap: 60px;
+            align-items: center;
+            position: relative;
+            z-index: 2;
+        }
+        .hero-eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 16px;
+            background: rgba(45, 74, 43, 0.08);
+            border: 1px solid rgba(45, 74, 43, 0.2);
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--forest);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 24px;
+        }
+        .tentative-pill {
+            display: inline-block;
+            padding: 4px 10px;
+            background: var(--terracotta, #c2562b);
+            color: #fff;
+            border-radius: 999px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+        .tentative-note {
+            display: block;
+            margin-top: -12px;
+            margin-bottom: 24px;
+            font-size: 12px;
+            font-style: italic;
+            color: rgba(45, 74, 43, 0.65);
+        }
+        .hero-eyebrow .dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: var(--terracotta);
+            animation: pulse 2s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(194, 86, 43, 0.6); }
+            50% { box-shadow: 0 0 0 8px rgba(194, 86, 43, 0); }
+        }
+        .hero h1 {
+            font-family: var(--serif);
+            font-size: clamp(48px, 7vw, 92px);
+            font-weight: 600;
+            line-height: 0.98;
+            letter-spacing: -0.025em;
+            margin-bottom: 28px;
+            color: var(--forest-deep);
+        }
+        .hero h1 em {
+            font-style: italic;
+            font-weight: 400;
+            color: var(--terracotta);
+        }
+        .hero-sub {
+            font-size: 19px;
+            line-height: 1.6;
+            color: var(--ink-soft);
+            max-width: 540px;
+            margin-bottom: 36px;
+        }
+        .hero-cta {
+            display: flex;
+            gap: 14px;
+            flex-wrap: wrap;
+            margin-bottom: 56px;
+        }
+        .hero-facts {
+            font-size: 13px;
+            color: var(--muted);
+            letter-spacing: 0.04em;
+            margin-bottom: 24px;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+        .hero-facts span { color: var(--ink-soft); }
+
+        .countdown {
+            max-width: 560px;
+            padding-top: 28px;
+            border-top: 1px solid var(--line);
+        }
+        .cd-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--muted);
+            font-weight: 600;
+            margin-bottom: 14px;
+        }
+        .cd-grid {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+        }
+        .cd-unit {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 64px;
+        }
+        .cd-num {
+            font-family: var(--serif);
+            font-size: clamp(40px, 5.5vw, 58px);
+            font-weight: 600;
+            line-height: 1;
+            color: var(--forest-deep);
+            font-variant-numeric: tabular-nums;
+        }
+        .cd-lbl {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--muted);
+            font-weight: 600;
+            margin-top: 8px;
+        }
+        .cd-sep {
+            font-family: var(--serif);
+            font-size: clamp(40px, 5.5vw, 58px);
+            font-weight: 400;
+            line-height: 1;
+            color: var(--terracotta);
+            opacity: 0.45;
+        }
+
+        .hero-visual {
+            position: relative;
+            aspect-ratio: 1/1;
+        }
+        .hero-visual img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            filter: drop-shadow(0 20px 40px rgba(27, 47, 26, 0.25));
+        }
+        .hero-visual::after { content: none; }
+        .hero-badge {
+            position: absolute;
+            bottom: -28px;
+            left: -28px;
+            width: 150px;
+            height: 150px;
+            background: var(--cream);
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            box-shadow: var(--shadow);
+            transform: rotate(-8deg);
+            border: 2px solid var(--forest);
+            z-index: 3;
+            animation: float 6s ease-in-out infinite;
+        }
+        @keyframes float {
+            0%, 100% { transform: rotate(-8deg) translateY(0); }
+            50% { transform: rotate(-6deg) translateY(-8px); }
+        }
+        .hero-badge .num {
+            font-family: var(--serif);
+            font-size: 36px;
+            font-weight: 800;
+            color: var(--forest-deep);
+            line-height: 1;
+        }
+        .hero-badge .txt {
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--ink-soft);
+            margin-top: 4px;
+        }
+
+        .marquee {
+            margin-top: 70px;
+            padding: 22px 0;
+            border-top: 1px solid var(--line);
+            border-bottom: 1px solid var(--line);
+            overflow: hidden;
+            position: relative;
+            z-index: 2;
+        }
+        .marquee-track {
+            display: flex;
+            gap: 60px;
+            animation: scroll 40s linear infinite;
+            white-space: nowrap;
+            font-family: var(--serif);
+            font-size: 22px;
+            font-style: italic;
+            color: var(--ink-soft);
+        }
+        .marquee-track span { display: flex; align-items: center; gap: 60px; }
+        .marquee-track span::after {
+            content: '✦';
+            color: var(--terracotta);
+            font-style: normal;
+        }
+        @keyframes scroll {
+            from { transform: translateX(0); }
+            to { transform: translateX(-50%); }
+        }
+
+        /* ---------- SECTIONS ---------- */
+        section { padding: 120px 0; position: relative; }
+        .section-eyebrow {
+            display: inline-block;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.14em;
+            font-weight: 600;
+            color: var(--terracotta);
+            margin-bottom: 16px;
+        }
+        .section-title {
+            font-family: var(--serif);
+            font-size: clamp(36px, 5vw, 60px);
+            font-weight: 600;
+            line-height: 1.05;
+            letter-spacing: -0.02em;
+            color: var(--forest-deep);
+            margin-bottom: 24px;
+            max-width: 800px;
+        }
+        .section-title em { font-style: italic; color: var(--terracotta); font-weight: 400; }
+        .section-lead {
+            font-size: 19px;
+            color: var(--ink-soft);
+            max-width: 680px;
+            line-height: 1.6;
+            margin-bottom: 60px;
+        }
+
+        /* ---------- FORMAT (About BYU) ---------- */
+        .format { background: var(--bg-warm); }
+        .format-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 80px;
+            align-items: center;
+        }
+        .rules-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .rules-list li {
+            display: flex;
+            gap: 24px;
+            padding: 24px 0;
+            border-bottom: 1px solid var(--line);
+            align-items: flex-start;
+        }
+        .rules-list li:last-child { border: none; }
+        .rules-list .num {
+            font-family: var(--serif);
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--terracotta);
+            min-width: 32px;
+            padding-top: 4px;
+        }
+        .rules-list h4 {
+            font-family: var(--serif);
+            font-size: 22px;
+            font-weight: 600;
+            color: var(--forest-deep);
+            margin-bottom: 6px;
+        }
+        .rules-list p { color: var(--ink-soft); font-size: 15px; }
+
+        .format-visual {
+            position: relative;
+            aspect-ratio: 1;
+        }
+        .clock {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: var(--cream);
+            border: 2px solid var(--forest);
+            position: relative;
+            box-shadow: var(--shadow);
+        }
+        .clock::before {
+            content: '';
+            position: absolute;
+            inset: 16px;
+            border-radius: 50%;
+            border: 1px dashed var(--line);
+        }
+        .clock-tick {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 4px;
+            height: 50%;
+            background: var(--forest);
+            transform-origin: top center;
+            transform: translateX(-50%);
+            animation: tick 60s linear infinite;
+        }
+        @keyframes tick {
+            from { transform: translateX(-50%) rotate(0deg); }
+            to { transform: translateX(-50%) rotate(360deg); }
+        }
+        .clock-center {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            font-family: var(--serif);
+            width: 70%;
+        }
+        .clock-center .big {
+            display: block;
+            font-size: clamp(48px, 7vw, 80px);
+            font-weight: 800;
+            color: var(--forest-deep);
+            line-height: 1;
+        }
+        .clock-center .lbl {
+            display: block;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-weight: 600;
+            color: var(--terracotta);
+            margin-top: 8px;
+        }
+
+        /* ---------- VETTERHOF ---------- */
+        .vetterhof {
+            background: var(--forest-deep);
+            color: var(--cream);
+            overflow: hidden;
+        }
+        .vetterhof .section-title { color: var(--cream); }
+        .vetterhof .section-eyebrow { color: var(--gold); }
+        .vetterhof .section-lead { color: rgba(251, 248, 240, 0.75); }
+        .vh-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60px;
+            align-items: stretch;
+        }
+        .vh-images {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            gap: 16px;
+            min-height: 560px;
+        }
+        .vh-images figure {
+            border-radius: var(--radius);
+            overflow: hidden;
+            position: relative;
+        }
+        .vh-images figure img {
+            width: 100%; height: 100%;
+            object-fit: cover;
+            transition: transform .8s ease;
+        }
+        .vh-images figure:hover img { transform: scale(1.05); }
+        .vh-images figure:nth-child(1) { grid-row: span 2; }
+        .vh-text { padding: 20px 0; }
+        .vh-features {
+            list-style: none;
+            margin-top: 32px;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+        .vh-features li {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            padding: 18px 22px;
+            background: rgba(251, 248, 240, 0.05);
+            border: 1px solid rgba(251, 248, 240, 0.1);
+            border-radius: 14px;
+            transition: all .3s;
+        }
+        .vh-features li:hover {
+            background: rgba(251, 248, 240, 0.08);
+            border-color: var(--gold);
+            transform: translateX(6px);
+        }
+        .vh-features .ico {
+            width: 44px; height: 44px;
+            border-radius: 12px;
+            background: var(--gold);
+            color: var(--forest-deep);
+            display: grid;
+            place-items: center;
+            font-family: var(--serif);
+            font-weight: 800;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+        .vh-features h4 {
+            font-family: var(--serif);
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+        .vh-features p { font-size: 14px; color: rgba(251, 248, 240, 0.65); }
+
+        /* ---------- LOOP / MAP ---------- */
+        .loop-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: end;
+            flex-wrap: wrap;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        .loop-head .section-lead { margin-bottom: 0; max-width: 520px; }
+        .loop-toggle {
+            display: inline-flex;
+            background: var(--cream);
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            padding: 4px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .loop-toggle button {
+            padding: 10px 20px;
+            border-radius: 999px;
+            color: var(--muted);
+            transition: all .25s;
+            white-space: nowrap;
+        }
+        .loop-toggle button.active {
+            background: var(--forest-deep);
+            color: var(--cream);
+        }
+        .loop-toggle button.active.mini { background: var(--terracotta); }
+        .loop-wrap {
+            display: grid;
+            grid-template-columns: 2.2fr 1fr;
+            gap: 24px;
+            align-items: stretch;
+        }
+        #map {
+            height: 520px;
+            border-radius: var(--radius);
+            border: 1px solid var(--line);
+            box-shadow: var(--shadow);
+            background: var(--bg-warm);
+            z-index: 1;
+        }
+        .leaflet-container { font-family: var(--sans); }
+        .loop-info {
+            background: var(--cream);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 32px;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+        .loop-info h3 {
+            font-family: var(--serif);
+            font-size: 28px;
+            font-weight: 600;
+            color: var(--forest-deep);
+            line-height: 1.1;
+        }
+        .loop-info p {
+            color: var(--ink-soft);
+            font-size: 15px;
+        }
+        .loop-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            padding: 18px 0;
+            border-top: 1px solid var(--line);
+            border-bottom: 1px solid var(--line);
+        }
+        .loop-stat .k {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--muted);
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .loop-stat .v {
+            font-family: var(--serif);
+            font-size: 22px;
+            font-weight: 600;
+            color: var(--forest-deep);
+        }
+        .loop-download {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .loop-download .btn { width: 100%; justify-content: center; }
+
+        /* ---------- CATEGORIES ---------- */
+        .categories-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 28px;
+            margin-top: 20px;
+        }
+        .cat-card {
+            border-radius: 24px;
+            padding: 48px;
+            position: relative;
+            overflow: hidden;
+            min-height: 480px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: transform .4s ease;
+        }
+        .cat-card:hover { transform: translateY(-6px); }
+        .cat-byu {
+            background: linear-gradient(160deg, var(--forest), var(--forest-deep));
+            color: var(--cream);
+        }
+        .cat-mini {
+            background: linear-gradient(160deg, var(--terracotta), var(--terracotta-deep));
+            color: var(--cream);
+        }
+        .cat-card .tag {
+            display: inline-block;
+            padding: 6px 14px;
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.25);
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 24px;
+        }
+        .cat-card h3 {
+            font-family: var(--serif);
+            font-size: 48px;
+            font-weight: 600;
+            line-height: 1;
+            margin-bottom: 18px;
+        }
+        .cat-card .desc {
+            font-size: 16px;
+            opacity: 0.85;
+            max-width: 460px;
+            margin-bottom: 32px;
+        }
+        .cat-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            padding-top: 32px;
+            border-top: 1px solid rgba(255,255,255,0.2);
+        }
+        .cat-stats .label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            opacity: 0.7;
+            margin-bottom: 4px;
+        }
+        .cat-stats .value {
+            font-family: var(--serif);
+            font-size: 26px;
+            font-weight: 600;
+        }
+        .cat-tiers {
+            margin: 28px 0 0;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .cat-tier {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            align-items: center;
+            gap: 14px;
+            padding: 12px 16px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 10px;
+            font-size: 14px;
+        }
+        .cat-tier .step {
+            font-family: var(--serif);
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            opacity: 0.7;
+        }
+        .cat-tier .qty {
+            font-size: 13px;
+            opacity: 0.85;
+        }
+        .cat-tier .price {
+            font-family: var(--serif);
+            font-weight: 700;
+            font-size: 18px;
+        }
+        .cat-card .glyph {
+            position: absolute;
+            top: 30px; right: 30px;
+            font-family: var(--serif);
+            font-size: 90px;
+            font-weight: 800;
+            opacity: 0.12;
+            line-height: 1;
+        }
+
+        /* ---------- SCHEDULE ---------- */
+        .schedule { background: var(--bg-warm); }
+        .timeline {
+            margin-top: 40px;
+            position: relative;
+        }
+        .timeline::before {
+            content: '';
+            position: absolute;
+            top: 0; bottom: 0;
+            left: 140px;
+            width: 2px;
+            background: linear-gradient(180deg, var(--terracotta), var(--forest), transparent);
+        }
+        .tl-row {
+            display: grid;
+            grid-template-columns: 120px 1fr;
+            gap: 60px;
+            padding: 28px 0;
+            position: relative;
+            align-items: start;
+        }
+        .tl-row::before {
+            content: '';
+            position: absolute;
+            left: 132px;
+            top: 38px;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--cream);
+            border: 3px solid var(--terracotta);
+            z-index: 2;
+        }
+        .tl-time {
+            font-family: var(--serif);
+            font-size: 28px;
+            font-weight: 600;
+            color: var(--forest-deep);
+            text-align: right;
+        }
+        .tl-content h4 {
+            font-family: var(--serif);
+            font-size: 22px;
+            font-weight: 600;
+            color: var(--forest-deep);
+            margin-bottom: 6px;
+        }
+        .tl-content p { color: var(--ink-soft); font-size: 15px; max-width: 540px; }
+
+        /* ---------- CREW ---------- */
+        .crew {
+            background: var(--ink);
+            color: var(--cream);
+            position: relative;
+            overflow: hidden;
+        }
+        .crew::before {
+            content: '';
+            position: absolute;
+            top: -200px; right: -200px;
+            width: 600px; height: 600px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(214, 167, 74, 0.15), transparent 70%);
+        }
+        .crew .section-title { color: var(--cream); }
+        .crew .section-eyebrow { color: var(--gold); }
+        .crew .section-lead { color: rgba(251, 248, 240, 0.7); }
+        .crew-grid {
+            display: grid;
+            grid-template-columns: 1.3fr 1fr;
+            gap: 80px;
+            align-items: start;
+            position: relative;
+            z-index: 2;
+        }
+        .perks {
+            list-style: none;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            margin-top: 36px;
+        }
+        .perks li {
+            padding: 20px;
+            background: rgba(251, 248, 240, 0.04);
+            border: 1px solid rgba(251, 248, 240, 0.1);
+            border-radius: 12px;
+            font-size: 14px;
+        }
+        .perks .check {
+            display: inline-block;
+            width: 20px; height: 20px;
+            border-radius: 50%;
+            background: var(--gold);
+            color: var(--ink);
+            text-align: center;
+            line-height: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            margin-right: 10px;
+        }
+        .crew-card {
+            padding: 40px;
+            background: linear-gradient(160deg, rgba(251, 248, 240, 0.08), rgba(251, 248, 240, 0.02));
+            border: 1px solid rgba(251, 248, 240, 0.15);
+            border-radius: var(--radius);
+            backdrop-filter: blur(10px);
+        }
+        .crew-card h3 {
+            font-family: var(--serif);
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+        .crew-card p { color: rgba(251,248,240,0.7); font-size: 15px; margin-bottom: 24px; }
+        .crew-card .btn { width: 100%; justify-content: center; }
+        .crew-stat {
+            display: flex;
+            justify-content: space-between;
+            padding: 14px 0;
+            border-bottom: 1px solid rgba(251,248,240,0.1);
+            font-size: 14px;
+        }
+        .crew-stat:last-of-type { border: none; margin-bottom: 24px; }
+        .crew-stat .k { color: rgba(251,248,240,0.6); }
+        .crew-stat .v { font-family: var(--serif); font-weight: 600; color: var(--gold); }
+
+        /* ---------- SPONSORS ---------- */
+        .sponsors-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: end;
+            gap: 40px;
+            margin-bottom: 50px;
+            flex-wrap: wrap;
+        }
+        .sponsors-head .section-lead { margin-bottom: 0; }
+        .sponsors-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+        }
+        .sponsor-tile {
+            aspect-ratio: 16/9;
+            background: var(--cream);
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            display: grid;
+            place-items: center;
+            font-family: var(--serif);
+            font-style: italic;
+            color: var(--muted);
+            font-size: 14px;
+            transition: all .3s;
+        }
+        .sponsor-tile:hover {
+            border-color: var(--terracotta);
+            color: var(--terracotta);
+            transform: translateY(-3px);
+        }
+
+        /* ---------- FAQ ---------- */
+        .faq { background: var(--bg-warm); }
+        .faq-grid {
+            display: grid;
+            grid-template-columns: 1fr 1.4fr;
+            gap: 80px;
+            align-items: start;
+        }
+        .faq-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .faq-item {
+            background: var(--cream);
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            overflow: hidden;
+            transition: all .3s;
+        }
+        .faq-item.open { border-color: var(--forest); }
+        .faq-q {
+            width: 100%;
+            text-align: left;
+            padding: 22px 26px;
+            font-family: var(--serif);
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--forest-deep);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+        }
+        .faq-q .plus {
+            width: 28px; height: 28px;
+            border-radius: 50%;
+            background: var(--bg);
+            display: grid;
+            place-items: center;
+            font-size: 18px;
+            color: var(--terracotta);
+            font-weight: 600;
+            transition: transform .3s;
+            flex-shrink: 0;
+        }
+        .faq-item.open .plus { transform: rotate(45deg); background: var(--terracotta); color: var(--cream); }
+        .faq-a {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height .4s ease, padding .4s ease;
+            padding: 0 26px;
+            color: var(--ink-soft);
+            font-size: 15px;
+        }
+        .faq-item.open .faq-a {
+            max-height: 300px;
+            padding: 0 26px 24px;
+        }
+
+        /* ---------- CTA / REGISTER ---------- */
+        .register {
+            background: linear-gradient(160deg, var(--terracotta), var(--terracotta-deep));
+            color: var(--cream);
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .register::before {
+            content: '∞';
+            position: absolute;
+            font-family: var(--serif);
+            font-size: 600px;
+            color: rgba(255,255,255,0.05);
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            font-weight: 800;
+            line-height: 1;
+        }
+        .register-inner { position: relative; z-index: 2; }
+        .register .section-eyebrow { color: rgba(251,248,240,0.85); }
+        .register h2 {
+            font-family: var(--serif);
+            font-size: clamp(44px, 7vw, 88px);
+            font-weight: 600;
+            line-height: 1;
+            margin-bottom: 24px;
+            color: var(--cream);
+        }
+        .register p {
+            font-size: 19px;
+            max-width: 600px;
+            margin: 0 auto 40px;
+            opacity: 0.9;
+        }
+        .register .hero-cta { justify-content: center; margin-bottom: 0; }
+
+        /* ---------- FOOTER ---------- */
+        footer {
+            background: var(--forest-deep);
+            color: rgba(251, 248, 240, 0.7);
+            padding: 80px 0 40px;
+        }
+        .footer-grid {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr 1fr 1fr;
+            gap: 50px;
+            margin-bottom: 60px;
+        }
+        .footer-brand {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 18px;
+        }
+        .footer-brand img { width: 48px; height: 48px; border-radius: 50%; }
+        .footer-brand strong {
+            font-family: var(--serif);
+            font-size: 22px;
+            color: var(--cream);
+        }
+        .footer-tag {
+            font-family: var(--serif);
+            font-style: italic;
+            font-size: 16px;
+            max-width: 300px;
+            color: rgba(251,248,240,0.6);
+        }
+        footer h5 {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--gold);
+            margin-bottom: 18px;
+            font-weight: 600;
+        }
+        footer ul { list-style: none; display: flex; flex-direction: column; gap: 10px; font-size: 14px; }
+        footer ul a:hover { color: var(--cream); }
+        .footer-bottom {
+            padding-top: 32px;
+            border-top: 1px solid rgba(251,248,240,0.1);
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        /* ---------- REVEAL ANIMATIONS ---------- */
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity .9s ease, transform .9s ease;
+        }
+        .reveal.in {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .reveal-stagger > * {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity .7s ease, transform .7s ease;
+        }
+        .reveal-stagger.in > * { opacity: 1; transform: translateY(0); }
+        .reveal-stagger.in > *:nth-child(1) { transition-delay: 0.05s; }
+        .reveal-stagger.in > *:nth-child(2) { transition-delay: 0.15s; }
+        .reveal-stagger.in > *:nth-child(3) { transition-delay: 0.25s; }
+        .reveal-stagger.in > *:nth-child(4) { transition-delay: 0.35s; }
+        .reveal-stagger.in > *:nth-child(5) { transition-delay: 0.45s; }
+        .reveal-stagger.in > *:nth-child(6) { transition-delay: 0.55s; }
+
+        /* ---------- DEBUG PALETTE SWITCHER ---------- */
+        .debug-panel {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9999;
+            background: rgba(20, 20, 20, 0.94);
+            color: #fff;
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 14px;
+            padding: 16px;
+            font-family: 'Inter', sans-serif;
+            font-size: 12px;
+            width: 260px;
+            box-shadow: 0 20px 50px -20px rgba(0,0,0,0.5);
+            display: none;
+        }
+        .debug-panel.open { display: block; }
+        .debug-panel h6 {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: #d6a74a;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .debug-panel h6 button {
+            color: #888;
+            font-size: 16px;
+            line-height: 1;
+        }
+        .debug-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+        .debug-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 10px;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: all .2s;
+            text-align: left;
+            width: 100%;
+            color: #fff;
+        }
+        .debug-item:hover { background: rgba(255,255,255,0.08); }
+        .debug-item.active { border-color: #d6a74a; background: rgba(214, 167, 74, 0.1); }
+        .debug-swatches {
+            display: flex;
+            gap: 3px;
+            flex-shrink: 0;
+        }
+        .debug-swatches span {
+            width: 14px;
+            height: 14px;
+            border-radius: 3px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .debug-name { font-weight: 500; font-size: 11px; }
+        .debug-toggle-hint {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            font-size: 10px;
+            color: #888;
+        }
+
+        /* ---------- RESPONSIVE ---------- */
+        @media (max-width: 960px) {
+            .nav-links { display: none; }
+            .nav-toggle { display: inline-flex; }
+            .nav-right > .btn-primary { display: none; }
+            section { padding: 80px 0; }
+            .hero { padding: 120px 0 60px; }
+            .hero-grid,
+            .format-grid,
+            .vh-grid,
+            .categories-grid,
+            .crew-grid,
+            .faq-grid {
+                grid-template-columns: 1fr;
+                gap: 50px;
+            }
+            .hero-visual { max-width: 420px; margin: 0 auto; }
+            .cd-unit { min-width: 0; }
+            .cd-grid { gap: 10px; }
+            .timeline::before { left: 14px; }
+            .tl-row { grid-template-columns: 1fr; gap: 8px; padding-left: 44px; }
+            .tl-row::before { left: 6px; top: 8px; }
+            .tl-time { text-align: left; font-size: 22px; }
+            .vh-images { min-height: 420px; }
+            .perks { grid-template-columns: 1fr; }
+            .sponsors-grid { grid-template-columns: repeat(2, 1fr); }
+            .loop-wrap { grid-template-columns: 1fr; }
+            #map { height: 380px; }
+            .loop-head { align-items: flex-start; }
+            .footer-grid { grid-template-columns: 1fr 1fr; }
+            .cat-card { padding: 36px; min-height: 420px; }
+            .cat-card h3 { font-size: 38px; }
+            .marquee-track { animation-duration: 8s; font-size: 18px; gap: 40px; }
+            .marquee-track span { gap: 40px; }
+        }
+        @media (max-width: 540px) {
+            .container { padding: 0 20px; }
+            .hero-badge { width: 110px; height: 110px; left: -10px; bottom: -20px; }
+            .hero-badge .num { font-size: 26px; }
+            .cd-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+            .cd-sep { display: none; }
+            .cd-num { font-size: 32px; }
+            .footer-grid { grid-template-columns: 1fr; }
+            .cat-stats { grid-template-columns: 1fr 1fr; gap: 16px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav" id="nav">
+    <div class="container nav-inner">
+        <a href="#" class="nav-logo">
+            <img src="assets/logos/logo-byu.png" alt="BYU Lustenau">
+            <span>BYU Lustenau</span>
+        </a>
+        <div class="nav-links">
+            <a href="#format" data-de="Format" data-en="Format">Format</a>
+            <a href="#vetterhof" data-de="Vetterhof" data-en="Vetterhof">Vetterhof</a>
+            <a href="#loop" data-de="Loop" data-en="Loop">Loop</a>
+            <a href="#kategorien" data-de="Kategorien" data-en="Categories">Kategorien</a>
+            <a href="#ablauf" data-de="Ablauf" data-en="Schedule">Ablauf</a>
+            <a href="#crew" data-de="Crew" data-en="Crew">Crew</a>
+            <a href="#faq" data-de="FAQ" data-en="FAQ">FAQ</a>
+        </div>
+        <div class="nav-right">
+            <div class="lang-switch">
+                <button class="active" data-lang="de">DE</button>
+                <button data-lang="en">EN</button>
+            </div>
+            <a href="#register" class="btn btn-primary" data-de="Vormerken" data-en="Get on list">Vormerken</a>
+            <button class="nav-toggle" id="navToggle" aria-label="Menu">☰</button>
+        </div>
+    </div>
+    <div class="mobile-menu" id="mobileMenu">
+        <ul>
+            <li><a href="#format" data-de="Format" data-en="Format">Format</a></li>
+            <li><a href="#vetterhof" data-de="Vetterhof" data-en="Vetterhof">Vetterhof</a></li>
+            <li><a href="#loop" data-de="Loop" data-en="Loop">Loop</a></li>
+            <li><a href="#kategorien" data-de="Kategorien" data-en="Categories">Kategorien</a></li>
+            <li><a href="#ablauf" data-de="Ablauf" data-en="Schedule">Ablauf</a></li>
+            <li><a href="#crew" data-de="Crew" data-en="Crew">Crew</a></li>
+            <li><a href="#faq" data-de="FAQ" data-en="FAQ">FAQ</a></li>
+        </ul>
+        <a href="#register" class="btn btn-primary" data-de="Auf die Warteliste →" data-en="Join the waitlist →">Auf die Warteliste →</a>
+    </div>
+</nav>
+
+<!-- HERO -->
+<header class="hero">
+    <div class="container hero-grid">
+        <div class="reveal in">
+            <span class="hero-eyebrow">
+                <span class="dot"></span>
+                <span class="tentative-pill" data-de="Save the date" data-en="Save the date">Save the date</span>
+                <span data-de="Vsl. 23. April 2027 · Vetterhof Lustenau" data-en="Tentative · April 23, 2027 · Vetterhof Lustenau">Vsl. 23. April 2027 · Vetterhof Lustenau</span>
+            </span>
+            <span class="tentative-note" data-de="Terminkorridor steht — kleine Verschiebungen noch möglich." data-en="Date window is set — minor shifts still possible.">Terminkorridor steht — kleine Verschiebungen noch möglich.</span>
+            <h1>
+                <span data-de="Wie weit" data-en="How far">Wie weit</span><br>
+                <em data-de="gehst du?" data-en="will you go?">gehst du?</em>
+            </h1>
+            <p class="hero-sub" data-de="Eine Runde. Eine Stunde. Wieder und wieder. Bis nur noch eine Person steht. Der erste Backyard Ultra im Rheintal — am Vetterhof in Lustenau, mitten im Grünen, getragen von einer Community, die weiß, was Ausdauer bedeutet."
+               data-en="One loop. One hour. Again and again. Until only one remains. The first Backyard Ultra in the Rhine Valley — held at Vetterhof in Lustenau, deep in the green, carried by a community that knows what endurance means.">
+                Eine Runde. Eine Stunde. Wieder und wieder. Bis nur noch eine Person steht. Der erste Backyard Ultra im Rheintal — am Vetterhof in Lustenau, mitten im Grünen, getragen von einer Community, die weiß, was Ausdauer bedeutet.
+            </p>
+            <p class="hero-facts">
+                <span>6.706 km Loop</span> · <span>100 BYU</span> · <span>30 Mini BYU</span>
+            </p>
+            <div class="hero-cta">
+                <a href="#register" class="btn btn-primary" data-de="Auf die Warteliste →" data-en="Join the waitlist →">Auf die Warteliste →</a>
+                <a href="#format" class="btn btn-ghost" data-de="So funktioniert's" data-en="How it works">So funktioniert's</a>
+            </div>
+            <div class="countdown" id="countdown" aria-label="Countdown">
+                <div class="cd-label" data-de="Countdown bis Yard 1 (vsl.)" data-en="Countdown to Yard 1 (tentative)">Countdown bis Yard 1 (vsl.)</div>
+                <div class="cd-grid">
+                    <div class="cd-unit"><span class="cd-num" data-unit="days">—</span><span class="cd-lbl" data-de="Tage" data-en="Days">Tage</span></div>
+                    <div class="cd-sep">:</div>
+                    <div class="cd-unit"><span class="cd-num" data-unit="hours">—</span><span class="cd-lbl" data-de="Std" data-en="Hrs">Std</span></div>
+                    <div class="cd-sep">:</div>
+                    <div class="cd-unit"><span class="cd-num" data-unit="minutes">—</span><span class="cd-lbl" data-de="Min" data-en="Min">Min</span></div>
+                    <div class="cd-sep">:</div>
+                    <div class="cd-unit"><span class="cd-num" data-unit="seconds">—</span><span class="cd-lbl" data-de="Sek" data-en="Sec">Sek</span></div>
+                </div>
+            </div>
+        </div>
+        <div class="hero-visual reveal in">
+            <img src="assets/images/patch-byu.webp" alt="BYU Lustenau Vetterhof Patch">
+            <div class="hero-badge">
+                <span class="num">2027</span>
+                <span class="txt" data-de="Erste Auflage" data-en="First Edition">Erste Auflage</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="marquee">
+        <div class="marquee-track">
+            <span data-de="Wie weit gehst du?" data-en="How far will you go?">Wie weit gehst du?</span>
+            <span data-de="6.706 km pro Stunde" data-en="6.706 km per hour">6.706 km pro Stunde</span>
+            <span data-de="Bis nur noch eine Person steht" data-en="Last one standing">Bis nur noch eine Person steht</span>
+            <span data-de="Vetterhof · Lustenau" data-en="Vetterhof · Lustenau">Vetterhof · Lustenau</span>
+            <span data-de="Wie weit gehst du?" data-en="How far will you go?">Wie weit gehst du?</span>
+            <span data-de="6.706 km pro Stunde" data-en="6.706 km per hour">6.706 km pro Stunde</span>
+            <span data-de="Bis nur noch eine Person steht" data-en="Last one standing">Bis nur noch eine Person steht</span>
+            <span data-de="Vetterhof · Lustenau" data-en="Vetterhof · Lustenau">Vetterhof · Lustenau</span>
+        </div>
+    </div>
+</header>
+
+<!-- FORMAT -->
+<section id="format" class="format">
+    <div class="container">
+        <div class="format-grid">
+            <div class="reveal">
+                <span class="section-eyebrow" data-de="Das Format" data-en="The format">Das Format</span>
+                <h2 class="section-title">
+                    <span data-de="Einfach in den Regeln," data-en="Simple in its rules,">Einfach in den Regeln,</span><br>
+                    <em data-de="brutal in der Konsequenz." data-en="brutal in its truth.">brutal in der Konsequenz.</em>
+                </h2>
+                <p class="section-lead" data-de="Erfunden von Lazarus Lake. Geliebt von einer wachsenden Community weltweit. Eine Idee, die alles auf den Kopf stellt: Es gibt keine Ziellinie. Es gibt nur die nächste Stunde."
+                   data-en="Invented by Lazarus Lake. Loved by a growing community worldwide. An idea that flips everything: there is no finish line. Only the next hour.">
+                    Erfunden von Lazarus Lake. Geliebt von einer wachsenden Community weltweit. Eine Idee, die alles auf den Kopf stellt: Es gibt keine Ziellinie. Es gibt nur die nächste Stunde.
+                </p>
+                <ul class="rules-list reveal-stagger">
+                    <li>
+                        <div class="num">01</div>
+                        <div>
+                            <h4 data-de="6.706 km pro Yard" data-en="6.706 km per yard">6.706 km pro Yard</h4>
+                            <p data-de="Jede Runde ist exakt gleich. 24 Runden ergeben 100 Meilen — in 24 Stunden. Mathematisch einfach, körperlich nicht."
+                               data-en="Every loop the same distance. 24 loops equal 100 miles — in 24 hours. Mathematically simple, physically anything but.">
+                                Jede Runde ist exakt gleich. 24 Runden ergeben 100 Meilen — in 24 Stunden.
+                            </p>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="num">02</div>
+                        <div>
+                            <h4 data-de="Eine Stunde, kein Bonus" data-en="One hour, no bonus">Eine Stunde, kein Bonus</h4>
+                            <p data-de="Wer schneller läuft, bekommt mehr Pause. Aber jede Runde startet um Punkt :00. Pünktlich. Immer."
+                               data-en="Run faster, rest longer. But every loop starts on the hour. Sharp. Always.">
+                                Wer schneller läuft, bekommt mehr Pause. Aber jede Runde startet um Punkt :00. Pünktlich. Immer.
+                            </p>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="num">03</div>
+                        <div>
+                            <h4 data-de="Nur ein Sieger" data-en="Only one winner">Nur ein Sieger</h4>
+                            <p data-de="Die letzte Person, die eine Runde komplett innerhalb der Stunde schafft. Alle anderen sind DNF. So einfach. So unerbittlich."
+                               data-en="The last person to complete a loop within the hour. Everyone else is DNF. That simple. That unforgiving.">
+                                Die letzte Person, die eine Runde komplett innerhalb der Stunde schafft. Alle anderen sind DNF. So einfach. So unerbittlich.
+                            </p>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+            <div class="format-visual reveal">
+                <div class="clock">
+                    <div class="clock-tick"></div>
+                    <div class="clock-center">
+                        <span class="big">60'</span>
+                        <span class="lbl" data-de="pro Runde" data-en="per loop">pro Runde</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- VETTERHOF -->
+<section id="vetterhof" class="vetterhof">
+    <div class="container">
+        <div class="vh-grid">
+            <div class="vh-images reveal">
+                <figure><img src="assets/images/photo-farm.png" alt="Frische Tomaten aus Vetterhof-Kisten"></figure>
+                <figure><img src="assets/images/photo-barn.png" alt="Scheune am Vetterhof mit Markt und Menschen"></figure>
+                <figure><img src="assets/images/photo-field.png" alt="Grünkohlernte am Vetterhof mit Bergen im Hintergrund"></figure>
+            </div>
+            <div class="vh-text reveal">
+                <span class="section-eyebrow" data-de="Der Ort" data-en="The place">Der Ort</span>
+                <h2 class="section-title">
+                    <span data-de="Ein Hof," data-en="A farm,">Ein Hof,</span> <em data-de="kein Stadion." data-en="not a stadium.">kein Stadion.</em>
+                </h2>
+                <p class="section-lead" data-de="Der Vetterhof ist seit Generationen Teil von Lustenau. Ein arbeitender Bio-Hof mit Scheunen, Feldern und einer Atmosphäre, die du in keiner Sporthalle findest. Hier startet die erste Runde — und vielleicht auch die fünfundzwanzigste."
+                   data-en="Vetterhof has been part of Lustenau for generations. A working organic farm with barns, fields and an atmosphere no sports hall could match. The first loop starts here — and maybe the twenty-fifth, too.">
+                    Der Vetterhof ist seit Generationen Teil von Lustenau. Ein arbeitender Bio-Hof mit Scheunen, Feldern und einer Atmosphäre, die du in keiner Sporthalle findest.
+                </p>
+                <ul class="vh-features reveal-stagger">
+                    <li>
+                        <div class="ico">★</div>
+                        <div>
+                            <h4 data-de="Bio-Hof mit Charakter" data-en="Organic farm with soul">Bio-Hof mit Charakter</h4>
+                            <p data-de="Echte Landwirtschaft. Echte Wege. Echtes Vorarlberg." data-en="Real agriculture. Real paths. Real Vorarlberg.">Echte Landwirtschaft. Echte Wege. Echtes Vorarlberg.</p>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="ico">↻</div>
+                        <div>
+                            <h4 data-de="6.706 km Loop" data-en="6.706 km loop">6.706 km Loop</h4>
+                            <p data-de="Asphalt und Schotter. Flach. Fair. Wiederholbar — wenn du es schaffst." data-en="Asphalt and gravel. Flat. Fair. Repeatable — if you can.">Asphalt und Schotter. Flach. Fair. Wiederholbar.</p>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="ico">♥</div>
+                        <div>
+                            <h4 data-de="Hofeigene Verpflegung" data-en="Farm-grown nutrition">Hofeigene Verpflegung</h4>
+                            <p data-de="Was am Hof wächst, landet bei der Crew. Saisonal. Regional. Ehrlich." data-en="What grows at the farm fuels the crew. Seasonal. Regional. Honest.">Was am Hof wächst, landet bei der Crew.</p>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="ico">⌖</div>
+                        <div>
+                            <h4 data-de="Mitten im Rheintal" data-en="Heart of the Rhine valley">Mitten im Rheintal</h4>
+                            <p data-de="Lustenau, Vorarlberg. Erreichbar von Bregenz, Dornbirn, St. Gallen, Bodensee." data-en="Lustenau, Vorarlberg. Easy reach from Bregenz, Dornbirn, St. Gallen, Lake Constance.">Lustenau, Vorarlberg. Im Herzen des Bodenseeraums.</p>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- LOOP / MAP -->
+<section id="loop">
+    <div class="container">
+        <div class="loop-head reveal">
+            <div>
+                <span class="section-eyebrow" data-de="Der Loop" data-en="The loop">Der Loop</span>
+                <h2 class="section-title">
+                    <span data-de="Eine Runde," data-en="One loop,">Eine Runde,</span>
+                    <em data-de="immer dieselbe." data-en="always the same.">immer dieselbe.</em>
+                </h2>
+                <p class="section-lead" data-de="Start und Ziel am Vetterhof. Flach, fair, wiederholbar. Asphalt und Schotter auf offiziell vermessenen Lustenauer Wegen."
+                   data-en="Start and finish at Vetterhof. Flat, fair, repeatable. Asphalt and gravel on officially measured Lustenau paths.">
+                    Start und Ziel am Vetterhof. Flach, fair, wiederholbar.
+                </p>
+            </div>
+            <div class="loop-toggle" id="loopToggle">
+                <button class="active" data-loop="byu">BYU · 6.706 km</button>
+                <button class="mini" data-loop="mini">Mini · 5 km</button>
+            </div>
+        </div>
+        <div class="loop-wrap reveal">
+            <div id="map" aria-label="Course map"></div>
+            <div class="loop-info">
+                <h3 id="loopTitle">BYU Loop</h3>
+                <p id="loopDesc" data-de-byu="Der offizielle 6.706 km Loop. 24 Runden ergeben exakt 100 Meilen. Gestartet wird im Stundentakt am Vetterhof."
+                   data-en-byu="The official 6.706 km loop. 24 laps equal exactly 100 miles. Every hour on the hour, from Vetterhof."
+                   data-de-mini="Der Mini-Loop über 5 km. Gleicher Spirit, kürzere Distanz — ideal für Einsteiger:innen und Teams."
+                   data-en-mini="The 5 km mini loop. Same spirit, shorter distance — perfect for first-timers and teams.">
+                    Der offizielle 6.706 km Loop. 24 Runden ergeben exakt 100 Meilen.
+                </p>
+                <div class="loop-stats">
+                    <div class="loop-stat">
+                        <div class="k" data-de="Distanz" data-en="Distance">Distanz</div>
+                        <div class="v" id="loopDist">6.706 km</div>
+                    </div>
+                    <div class="loop-stat">
+                        <div class="k" data-de="Höhenmeter" data-en="Elevation">Höhenmeter</div>
+                        <div class="v">~flat</div>
+                    </div>
+                    <div class="loop-stat">
+                        <div class="k" data-de="Untergrund" data-en="Surface">Untergrund</div>
+                        <div class="v" data-de="Asphalt / Schotter" data-en="Asphalt / gravel">Asphalt / Schotter</div>
+                    </div>
+                    <div class="loop-stat">
+                        <div class="k" data-de="Start" data-en="Start">Start</div>
+                        <div class="v">Vetterhof</div>
+                    </div>
+                </div>
+                <div class="loop-download">
+                    <a id="loopDownload" class="btn btn-primary" href="assets/gpx/byu-lustenau-loop-6.706km.gpx" download data-de="GPX herunterladen" data-en="Download GPX">GPX herunterladen</a>
+                    <a class="btn btn-ghost" href="https://www.komoot.com" target="_blank" rel="noopener" data-de="In Komoot öffnen" data-en="Open in Komoot">In Komoot öffnen</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CATEGORIES -->
+<section id="kategorien">
+    <div class="container">
+        <div class="reveal">
+            <span class="section-eyebrow" data-de="Zwei Kategorien" data-en="Two categories">Zwei Kategorien</span>
+            <h2 class="section-title">
+                <span data-de="Wähle dein" data-en="Choose your">Wähle dein</span>
+                <em data-de="Format." data-en="format.">Format.</em>
+            </h2>
+            <p class="section-lead" data-de="Die volle Distanz für die, die alles wollen. Eine zugängliche Variante für die, die das Format kennenlernen möchten — beide auf demselben Kurs, im selben Spirit."
+               data-en="The full distance for those who want it all. An accessible version for those discovering the format — same loop, same spirit.">
+                Die volle Distanz für die, die alles wollen. Eine zugängliche Variante für die, die das Format kennenlernen möchten.
+            </p>
+        </div>
+        <div class="categories-grid reveal-stagger">
+            <div class="cat-card cat-byu">
+                <div class="glyph">∞</div>
+                <div>
+                    <span class="tag" data-de="Hauptbewerb" data-en="Main event">Hauptbewerb</span>
+                    <h3>BYU Lustenau</h3>
+                    <p class="desc" data-de="Der echte Backyard Ultra. 6.706 km pro Stunde. Bis dein Körper, dein Kopf oder die Uhr nein sagt — und nur noch eine Person von 100 steht."
+                       data-en="The real Backyard Ultra. 6.706 km per hour. Until your body, your mind or the clock says no — and one of 100 stands last.">
+                        Der echte Backyard Ultra. 6.706 km pro Stunde. Bis nur noch eine Person von 100 steht.
+                    </p>
+                    <div class="cat-tiers">
+                        <div class="cat-tier"><span class="step">Step 1</span><span class="qty" data-de="15 Plätze" data-en="15 slots">15 Plätze</span><span class="price">€60</span></div>
+                        <div class="cat-tier"><span class="step">Step 2</span><span class="qty" data-de="20 Plätze" data-en="20 slots">20 Plätze</span><span class="price">€70</span></div>
+                        <div class="cat-tier"><span class="step">Step 3</span><span class="qty" data-de="30 Plätze" data-en="30 slots">30 Plätze</span><span class="price">€80</span></div>
+                        <div class="cat-tier"><span class="step">Step 4</span><span class="qty" data-de="35 Plätze" data-en="35 slots">35 Plätze</span><span class="price">€90</span></div>
+                    </div>
+                </div>
+                <div class="cat-stats">
+                    <div>
+                        <div class="label" data-de="Plätze" data-en="Slots">Plätze</div>
+                        <div class="value">100</div>
+                    </div>
+                    <div>
+                        <div class="label" data-de="Loop" data-en="Loop">Loop</div>
+                        <div class="value">6.706 km</div>
+                    </div>
+                    <div>
+                        <div class="label" data-de="Limit" data-en="Limit">Limit</div>
+                        <div class="value">∞</div>
+                    </div>
+                </div>
+            </div>
+            <div class="cat-card cat-mini">
+                <div class="glyph">5K</div>
+                <div>
+                    <span class="tag" data-de="Einsteiger" data-en="Entry">Einsteiger</span>
+                    <h3>Mini BYU</h3>
+                    <p class="desc" data-de="5 km pro Stunde. Gleicher Hof, gleiches Format, andere Distanz. Für Einsteiger:innen, Teams und alle, die das Format ehrlich erleben wollen."
+                       data-en="5 km per hour. Same farm, same format, different distance. For first-timers, teams and anyone who wants to taste the format honestly.">
+                        5 km pro Stunde. Gleicher Hof, gleiches Format, andere Distanz.
+                    </p>
+                    <div class="cat-tiers">
+                        <div class="cat-tier"><span class="step">Step 1</span><span class="qty" data-de="5 Plätze" data-en="5 slots">5 Plätze</span><span class="price">€50</span></div>
+                        <div class="cat-tier"><span class="step">Step 2</span><span class="qty" data-de="5 Plätze" data-en="5 slots">5 Plätze</span><span class="price">€60</span></div>
+                        <div class="cat-tier"><span class="step">Step 3</span><span class="qty" data-de="10 Plätze" data-en="10 slots">10 Plätze</span><span class="price">€70</span></div>
+                        <div class="cat-tier"><span class="step">Step 4</span><span class="qty" data-de="10 Plätze" data-en="10 slots">10 Plätze</span><span class="price">€80</span></div>
+                    </div>
+                </div>
+                <div class="cat-stats">
+                    <div>
+                        <div class="label" data-de="Plätze" data-en="Slots">Plätze</div>
+                        <div class="value">30</div>
+                    </div>
+                    <div>
+                        <div class="label" data-de="Loop" data-en="Loop">Loop</div>
+                        <div class="value">5 km</div>
+                    </div>
+                    <div>
+                        <div class="label" data-de="Limit" data-en="Limit">Limit</div>
+                        <div class="value">∞</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- SCHEDULE -->
+<section id="ablauf" class="schedule">
+    <div class="container">
+        <div class="reveal">
+            <span class="section-eyebrow" data-de="Der Ablauf" data-en="The schedule">Der Ablauf</span>
+            <h2 class="section-title">
+                <span data-de="Vsl. 23. April 2027." data-en="Tentative · April 23, 2027.">Vsl. 23. April 2027.</span>
+                <em data-de="Stunde für Stunde." data-en="Hour by hour.">Stunde für Stunde.</em>
+            </h2>
+            <p class="section-lead" data-de="Du kommst nicht zum Hof, um eine Stunde zu laufen. Du kommst, um nicht zu wissen, wie viele es werden."
+               data-en="You don't come to the farm to run for one hour. You come not knowing how many it will be.">
+                Du kommst nicht zum Hof, um eine Stunde zu laufen. Du kommst, um nicht zu wissen, wie viele es werden.
+            </p>
+        </div>
+        <div class="timeline reveal-stagger">
+            <div class="tl-row">
+                <div class="tl-time">07:00</div>
+                <div class="tl-content">
+                    <h4 data-de="Check-in & Briefing" data-en="Check-in & briefing">Check-in & Briefing</h4>
+                    <p data-de="Startnummern, letzte Fragen, Camp aufschlagen. Der Hof wacht auf, der Geruch von Kaffee zieht durch die Scheune."
+                       data-en="Bibs, last questions, set up your camp. The farm wakes up, coffee drifts through the barn.">
+                        Startnummern, letzte Fragen, Camp aufschlagen. Der Hof wacht auf.
+                    </p>
+                </div>
+            </div>
+            <div class="tl-row">
+                <div class="tl-time">08:55</div>
+                <div class="tl-content">
+                    <h4 data-de="Drei Glockenschläge" data-en="Three bell rings">Drei Glockenschläge</h4>
+                    <p data-de="Die Tradition: drei Schläge vor dem Start jeder Runde. Drei Minuten. Zwei. Eine. Dann läuft die Stunde."
+                       data-en="The tradition: three rings before each loop. Three minutes. Two. One. Then the hour begins.">
+                        Die Tradition: drei Schläge vor dem Start jeder Runde.
+                    </p>
+                </div>
+            </div>
+            <div class="tl-row">
+                <div class="tl-time">09:00</div>
+                <div class="tl-content">
+                    <h4 data-de="Yard 1 — Es beginnt" data-en="Yard 1 — It begins">Yard 1 — Es beginnt</h4>
+                    <p data-de="100 Läufer:innen. Ein Loop. Eine Stunde. Niemand weiß, wer um Mitternacht noch dabei ist. Niemand weiß, wer um Mitternacht des nächsten Tages noch dabei ist."
+                       data-en="100 runners. One loop. One hour. Nobody knows who's still in by midnight. Nobody knows who's still in by midnight tomorrow.">
+                        100 Läufer:innen. Ein Loop. Eine Stunde.
+                    </p>
+                </div>
+            </div>
+            <div class="tl-row">
+                <div class="tl-time">21:00</div>
+                <div class="tl-content">
+                    <h4 data-de="Yard 13 — Die Nacht kommt" data-en="Yard 13 — Night falls">Yard 13 — Die Nacht kommt</h4>
+                    <p data-de="Stirnlampen an. Die Crew bringt warme Suppe. Hier trennt sich, wer trainiert hat — und wer bereit ist."
+                       data-en="Headlamps on. The crew brings warm soup. Here it splits: who has trained — and who is ready.">
+                        Stirnlampen an. Die Crew bringt warme Suppe.
+                    </p>
+                </div>
+            </div>
+            <div class="tl-row">
+                <div class="tl-time">∞</div>
+                <div class="tl-content">
+                    <h4 data-de="Yard ? — Last one standing" data-en="Yard ? — Last one standing">Yard ? — Last one standing</h4>
+                    <p data-de="Es endet, wenn es endet. Eine Person beendet die letzte Runde innerhalb der Stunde — alle anderen sind DNF. So ist das Spiel."
+                       data-en="It ends when it ends. One person finishes the final loop within the hour — everyone else is DNF. That's the game.">
+                        Es endet, wenn es endet. Eine Person. So ist das Spiel.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CREW -->
+<section id="crew" class="crew">
+    <div class="container">
+        <div class="crew-grid">
+            <div class="reveal">
+                <span class="section-eyebrow" data-de="Die Crew" data-en="The crew">Die Crew</span>
+                <h2 class="section-title">
+                    <span data-de="Nicht Helfer." data-en="Not helpers.">Nicht Helfer.</span>
+                    <em data-de="Die Crew." data-en="The crew.">Die Crew.</em>
+                </h2>
+                <p class="section-lead" data-de="Wer die BYU Lustenau trägt, ist Teil von etwas, das sich über Jahre aufbaut. Wir suchen keine Helfer für eine Schicht. Wir bauen eine Crew, die jedes Jahr wiederkommt — und davon erzählt."
+                   data-en="Carrying BYU Lustenau means being part of something that grows year after year. We're not looking for shift workers. We're building a crew that returns — and tells the story.">
+                    Wir suchen keine Helfer für eine Schicht. Wir bauen eine Crew.
+                </p>
+                <ul class="perks reveal-stagger">
+                    <li><span class="check">✓</span><span data-de="Crew-Patch (gestickte Lustenauer Stickerei)" data-en="Embroidered crew patch">Crew-Patch (gestickte Lustenauer Stickerei)</span></li>
+                    <li><span class="check">✓</span><span data-de="Verpflegung vom Hof, den ganzen Tag" data-en="Farm food, all day long">Verpflegung vom Hof, den ganzen Tag</span></li>
+                    <li><span class="check">✓</span><span data-de="Crew-Dinner am Vorabend" data-en="Crew dinner the night before">Crew-Dinner am Vorabend</span></li>
+                    <li><span class="check">✓</span><span data-de="Persönliche Anerkennung post-event" data-en="Personal recognition post-event">Persönliche Anerkennung post-event</span></li>
+                    <li><span class="check">✓</span><span data-de="Vortritt im Folgejahr" data-en="Priority in following year">Vortritt im Folgejahr</span></li>
+                    <li><span class="check">✓</span><span data-de="Mittendrin statt nur dabei" data-en="In the middle, not on the side">Mittendrin statt nur dabei</span></li>
+                </ul>
+            </div>
+            <div class="crew-card reveal">
+                <h3 data-de="Bewirb dich" data-en="Apply">Bewirb dich</h3>
+                <p data-de="Plätze sind limitiert. Wir wählen sorgfältig — nicht nach Erfahrung, sondern nach Haltung."
+                   data-en="Slots are limited. We choose carefully — not by experience, but by attitude.">
+                    Plätze sind limitiert. Wir wählen sorgfältig.
+                </p>
+                <div class="crew-stat"><span class="k" data-de="Crew-Plätze gesamt" data-en="Total crew spots">Crew-Plätze gesamt</span><span class="v">~30</span></div>
+                <div class="crew-stat"><span class="k" data-de="Bewerbungen offen bis" data-en="Applications open until">Bewerbungen offen bis</span><span class="v">31.10.2026</span></div>
+                <div class="crew-stat"><span class="k" data-de="Auswahl" data-en="Selection">Auswahl</span><span class="v" data-de="auf Einladung" data-en="by invitation">auf Einladung</span></div>
+                <a href="mailto:crew@byu-lustenau.at" class="btn btn-light" data-de="Crew-Bewerbung senden →" data-en="Send crew application →">Crew-Bewerbung senden →</a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- SPONSORS -->
+<section id="sponsors">
+    <div class="container">
+        <div class="sponsors-head reveal">
+            <div>
+                <span class="section-eyebrow" data-de="Partner" data-en="Partners">Partner</span>
+                <h2 class="section-title">
+                    <span data-de="Getragen von" data-en="Backed by">Getragen von</span>
+                    <em data-de="der Region." data-en="the region.">der Region.</em>
+                </h2>
+            </div>
+            <p class="section-lead" data-de="BYU Lustenau ist ein gemeinnütziges Vorhaben. Jeder Partner ermöglicht, dass die Plätze bezahlbar bleiben — und der Hof, der Sport und die Athlet:innen im Mittelpunkt."
+               data-en="BYU Lustenau is a non-profit endeavour. Every partner keeps the entry affordable — and the farm, the sport and the athletes at the centre.">
+                BYU Lustenau ist ein gemeinnütziges Vorhaben.
+            </p>
+        </div>
+        <div class="sponsors-grid reveal-stagger">
+            <div class="sponsor-tile">Vetterhof</div>
+            <div class="sponsor-tile" data-de="Partner werden" data-en="Become a partner">Partner werden</div>
+            <div class="sponsor-tile" data-de="Partner werden" data-en="Become a partner">Partner werden</div>
+            <div class="sponsor-tile" data-de="Partner werden" data-en="Become a partner">Partner werden</div>
+            <div class="sponsor-tile" data-de="Partner werden" data-en="Become a partner">Partner werden</div>
+            <div class="sponsor-tile" data-de="Partner werden" data-en="Become a partner">Partner werden</div>
+            <div class="sponsor-tile" data-de="Partner werden" data-en="Become a partner">Partner werden</div>
+            <div class="sponsor-tile" data-de="Partner werden" data-en="Become a partner">Partner werden</div>
+        </div>
+    </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq" class="faq">
+    <div class="container">
+        <div class="faq-grid">
+            <div class="reveal">
+                <span class="section-eyebrow">FAQ</span>
+                <h2 class="section-title">
+                    <span data-de="Was du" data-en="What you">Was du</span>
+                    <em data-de="wissen musst." data-en="need to know.">wissen musst.</em>
+                </h2>
+                <p class="section-lead" data-de="Noch eine Frage offen? Schreib uns. Wir antworten persönlich."
+                   data-en="Still a question? Write to us. We answer personally.">
+                    Noch eine Frage offen? Schreib uns.
+                </p>
+            </div>
+            <div class="faq-list reveal">
+                <div class="faq-item">
+                    <button class="faq-q"><span data-de="Brauche ich Erfahrung mit Ultras?" data-en="Do I need ultra experience?">Brauche ich Erfahrung mit Ultras?</span><span class="plus">+</span></button>
+                    <div class="faq-a"><p data-de="Nein. Aber du brauchst eine ehrliche Vorbereitung. Eine Stunde laufen ist machbar — sie zehn-, zwanzig-, dreißig Mal zu wiederholen, ist eine andere Welt. Wir empfehlen mindestens 6 Monate strukturiertes Training."
+                                          data-en="No. But you need honest preparation. Running one hour is doable — repeating it ten, twenty, thirty times is another world. We recommend at least 6 months of structured training.">Nein. Aber du brauchst eine ehrliche Vorbereitung.</p></div>
+                </div>
+                <div class="faq-item">
+                    <button class="faq-q"><span data-de="Wie melde ich mich an?" data-en="How do I register?">Wie melde ich mich an?</span><span class="plus">+</span></button>
+                    <div class="faq-a"><p data-de="Anmeldung öffnet im Sommer 2026. Newsletter-Abonnent:innen erhalten 48 Stunden vor allen anderen Zugang. Plätze sind streng limitiert."
+                                          data-en="Registration opens summer 2026. Newsletter subscribers get access 48 hours before everyone else. Slots are strictly limited.">Anmeldung öffnet im Sommer 2026.</p></div>
+                </div>
+                <div class="faq-item">
+                    <button class="faq-q"><span data-de="Was kostet die Teilnahme?" data-en="What does it cost?">Was kostet die Teilnahme?</span><span class="plus">+</span></button>
+                    <div class="faq-a"><p data-de="Wir arbeiten mit Early-Bird-Stufen: BYU startet bei €60 (Step 1, 15 Plätze) und steigt über €70 / €80 auf €90 (Step 4). Mini BYU startet bei €50 und steigt über €60 / €70 auf €80. Wer früh dran ist, zahlt weniger — und sichert sich seinen Platz."
+                                          data-en="We use early-bird tiers: BYU starts at €60 (Step 1, 15 slots) and rises through €70 / €80 to €90 (Step 4). Mini BYU starts at €50 and rises through €60 / €70 to €80. Early birds pay less — and lock in their spot.">Early-Bird-Stufen: BYU €60 → €90, Mini €50 → €80. Wer früh dran ist, zahlt weniger.</p></div>
+                </div>
+                <div class="faq-item">
+                    <button class="faq-q"><span data-de="Kann ich am Hof übernachten?" data-en="Can I stay at the farm?">Kann ich am Hof übernachten?</span><span class="plus">+</span></button>
+                    <div class="faq-a"><p data-de="Ja. Ein Zelt-Bereich am Hof gehört zum Konzept. Wer es lieber komfortabler mag — Lustenau hat Hotels und Pensionen in Gehweite."
+                                          data-en="Yes. A camping area at the farm is part of the concept. Prefer comfort? Lustenau has hotels within walking distance.">Ja. Ein Zelt-Bereich am Hof gehört zum Konzept.</p></div>
+                </div>
+                <div class="faq-item">
+                    <button class="faq-q"><span data-de="Gibt es Verpflegung?" data-en="Is food provided?">Gibt es Verpflegung?</span><span class="plus">+</span></button>
+                    <div class="faq-a"><p data-de="Eine Aid-Station mit Wasser, Iso, Obst, salzigen Snacks und warmen Mahlzeiten ist rund um die Uhr offen — vieles direkt vom Hof. Eigene Verpflegung im Camp ist erlaubt und üblich."
+                                          data-en="An aid station with water, electrolytes, fruit, salty snacks and warm meals is open around the clock — much of it from the farm. Own supplies in your camp are welcome.">Aid-Station rund um die Uhr — vieles direkt vom Hof.</p></div>
+                </div>
+                <div class="faq-item">
+                    <button class="faq-q"><span data-de="Wer steht hinter dem Event?" data-en="Who runs this?">Wer steht hinter dem Event?</span><span class="plus">+</span></button>
+                    <div class="faq-a"><p data-de="Ein gemeinnütziger Verein aus Lustenau, in Partnerschaft mit dem Vetterhof. Getragen von Menschen, die selbst laufen — und wissen, was sie sich da antun."
+                                          data-en="A non-profit association from Lustenau, in partnership with Vetterhof. Carried by people who run themselves — and know what they're getting into.">Ein gemeinnütziger Verein aus Lustenau.</p></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- REGISTER -->
+<section id="register" class="register">
+    <div class="container register-inner reveal">
+        <span class="section-eyebrow" data-de="Save the date · Vsl. 23. April 2027" data-en="Save the date · Tentative April 23, 2027">Save the date · Vsl. 23. April 2027</span>
+        <h2 data-de="Bist du bereit?" data-en="Are you ready?">Bist du bereit?</h2>
+        <p data-de="Trag dich in die Warteliste ein. Du erhältst Updates, exklusive Einblicke und 48 Stunden Vorsprung, wenn die Anmeldung öffnet. Das genaue Datum bestätigen wir mit dem Anmeldestart."
+           data-en="Join the waitlist. You'll receive updates, exclusive insights and a 48-hour head start when registration opens. The exact date will be confirmed when registration opens.">
+            Trag dich in die Warteliste ein. 48 Stunden Vorsprung, wenn die Anmeldung öffnet. Das genaue Datum bestätigen wir mit dem Anmeldestart.
+        </p>
+        <div class="hero-cta">
+            <a href="mailto:hallo@byu-lustenau.at" class="btn btn-light" data-de="Auf die Warteliste →" data-en="Join the waitlist →">Auf die Warteliste →</a>
+            <a href="https://instagram.com/byu.lustenau" class="btn btn-ghost" style="border-color: var(--cream); color: var(--cream);" data-de="Auf Instagram folgen" data-en="Follow on Instagram">Auf Instagram folgen</a>
+        </div>
+    </div>
+</section>
+
+<!-- DEBUG PANEL -->
+<div class="debug-panel" id="debugPanel">
+    <h6>
+        <span>🎨 Palette Debug</span>
+        <button id="debugClose" aria-label="Close">×</button>
+    </h6>
+    <div class="debug-list" id="debugList"></div>
+    <div class="debug-toggle-hint">Press <strong>Shift+D</strong> to toggle · or add <code>?debug</code> to URL</div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+    <div class="container">
+        <div class="footer-grid">
+            <div>
+                <div class="footer-brand">
+                    <img src="assets/logos/logo-byu.png" alt="">
+                    <strong>BYU Lustenau</strong>
+                </div>
+                <p class="footer-tag" data-de="„Wie weit gehst du?" data-en="„How far will you go?">„Wie weit gehst du?"</p>
+            </div>
+            <div>
+                <h5 data-de="Event" data-en="Event">Event</h5>
+                <ul>
+                    <li><a href="#format" data-de="Format" data-en="Format">Format</a></li>
+                    <li><a href="#vetterhof" data-de="Ort" data-en="Location">Ort</a></li>
+                    <li><a href="#kategorien" data-de="Kategorien" data-en="Categories">Kategorien</a></li>
+                    <li><a href="#ablauf" data-de="Ablauf" data-en="Schedule">Ablauf</a></li>
+                </ul>
+            </div>
+            <div>
+                <h5 data-de="Mitmachen" data-en="Take part">Mitmachen</h5>
+                <ul>
+                    <li><a href="#register" data-de="Anmelden" data-en="Register">Anmelden</a></li>
+                    <li><a href="#crew" data-de="Crew werden" data-en="Join crew">Crew werden</a></li>
+                    <li><a href="#sponsors" data-de="Partner werden" data-en="Become partner">Partner werden</a></li>
+                    <li><a href="#faq">FAQ</a></li>
+                </ul>
+            </div>
+            <div>
+                <h5 data-de="Kontakt" data-en="Contact">Kontakt</h5>
+                <ul>
+                    <li><a href="mailto:hallo@byu-lustenau.at">hallo@byu-lustenau.at</a></li>
+                    <li><a href="https://instagram.com/byu.lustenau">@byu.lustenau</a></li>
+                    <li>Lustenau, Vorarlberg</li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <span>© 2026 BYU Lustenau · <span data-de="Ein gemeinnütziges Vorhaben" data-en="A non-profit endeavour">Ein gemeinnütziges Vorhaben</span></span>
+            <span><a href="#">Impressum</a> · <a href="#">Datenschutz</a></span>
+        </div>
+    </div>
+</footer>
+
+<script>
+    // Countdown to Yard 1 (2027-04-23 09:00 CEST)
+    const countdownTarget = new Date('2027-04-23T09:00:00+02:00').getTime();
+    const cdMap = {};
+    document.querySelectorAll('#countdown .cd-num').forEach(el => cdMap[el.dataset.unit] = el);
+    const tickCountdown = () => {
+        const diff = countdownTarget - Date.now();
+        if (diff <= 0) {
+            ['days','hours','minutes','seconds'].forEach(u => cdMap[u].textContent = '00');
+            return;
+        }
+        const d = Math.floor(diff / 86400000);
+        const h = Math.floor((diff % 86400000) / 3600000);
+        const m = Math.floor((diff % 3600000) / 60000);
+        const s = Math.floor((diff % 60000) / 1000);
+        cdMap.days.textContent = String(d);
+        cdMap.hours.textContent = String(h).padStart(2, '0');
+        cdMap.minutes.textContent = String(m).padStart(2, '0');
+        cdMap.seconds.textContent = String(s).padStart(2, '0');
+    };
+    tickCountdown();
+    setInterval(tickCountdown, 1000);
+
+    // ---------- LOOP MAP ----------
+    const BYU_COORDS = [[47.411058,9.687146],[47.411065,9.686891],[47.411353,9.686897],[47.411424,9.686895],[47.411485,9.686881],[47.411568,9.686848],[47.41172,9.686718],[47.41186,9.686636],[47.412343,9.686553],[47.412446,9.686523],[47.412739,9.68637],[47.412929,9.68629],[47.413252,9.686113],[47.4135,9.685957],[47.41383,9.685788],[47.414275,9.685535],[47.414899,9.685628],[47.415297,9.685656],[47.41539,9.685696],[47.415456,9.685713],[47.415524,9.685715],[47.415614,9.685705],[47.416167,9.685569],[47.416242,9.685537],[47.41646,9.685396],[47.416596,9.685367],[47.416686,9.685393],[47.416937,9.685578],[47.417018,9.68566],[47.417252,9.685688],[47.417911,9.685741],[47.419618,9.685964],[47.420471,9.686091],[47.421323,9.686202],[47.422727,9.686414],[47.423029,9.686492],[47.423381,9.686626],[47.423529,9.686699],[47.42381,9.686869],[47.423971,9.686981],[47.424081,9.687078],[47.424145,9.687198],[47.424271,9.687368],[47.424344,9.687212],[47.424618,9.686687],[47.424726,9.686439],[47.424726,9.686439],[47.424788,9.686291],[47.424889,9.685957],[47.424925,9.685794],[47.424952,9.685619],[47.424968,9.685396],[47.424986,9.684636],[47.425006,9.682756],[47.418625,9.681652],[47.418523,9.682388],[47.418523,9.682388],[47.418415,9.683168],[47.418373,9.683311],[47.418328,9.68337],[47.418263,9.683408],[47.418185,9.683402],[47.417419,9.683179],[47.415894,9.682712],[47.415951,9.682187],[47.416273,9.676976],[47.416157,9.676949],[47.415989,9.676852],[47.415834,9.676827],[47.414762,9.676825],[47.41384,9.676831],[47.413615,9.676841],[47.412185,9.676825],[47.411863,9.676861],[47.411865,9.676629],[47.412203,9.675172],[47.412599,9.673697],[47.412479,9.673679],[47.412097,9.673516],[47.411982,9.673501],[47.411937,9.673506],[47.411883,9.673529],[47.410454,9.674589],[47.410059,9.6749],[47.409219,9.675538],[47.409184,9.675563],[47.40914,9.675561],[47.409135,9.675863],[47.409117,9.676873],[47.409175,9.676894],[47.4093,9.676869],[47.409723,9.676848],[47.411496,9.676841],[47.411755,9.676864],[47.411992,9.676851],[47.412185,9.676825],[47.413615,9.676841],[47.41384,9.676831],[47.414762,9.676825],[47.415834,9.676827],[47.415989,9.676852],[47.416157,9.676949],[47.416273,9.676976],[47.415982,9.681686],[47.415982,9.681686],[47.415951,9.682187],[47.415894,9.682712],[47.415824,9.683183],[47.41539,9.685696],[47.415297,9.685656],[47.414899,9.685628],[47.414275,9.685535],[47.41383,9.685788],[47.4135,9.685957],[47.413252,9.686113],[47.412929,9.68629],[47.412739,9.68637],[47.412446,9.686523],[47.412343,9.686553],[47.41186,9.686636],[47.41172,9.686718],[47.411568,9.686848],[47.411485,9.686881],[47.411424,9.686895],[47.411353,9.686897],[47.411065,9.686891],[47.411058,9.687149]];
+    const MINI_COORDS = [[47.411057,9.687169],[47.411065,9.686891],[47.411353,9.686897],[47.411424,9.686895],[47.411485,9.686881],[47.411568,9.686848],[47.41172,9.686718],[47.41186,9.686636],[47.412343,9.686553],[47.412446,9.686523],[47.412739,9.68637],[47.412929,9.68629],[47.413252,9.686113],[47.4135,9.685957],[47.41383,9.685788],[47.414275,9.685535],[47.414899,9.685628],[47.415297,9.685656],[47.41539,9.685696],[47.415824,9.683183],[47.415894,9.682712],[47.417419,9.683179],[47.418185,9.683402],[47.418263,9.683408],[47.418328,9.68337],[47.418373,9.683311],[47.418415,9.683168],[47.418625,9.681652],[47.425006,9.682756],[47.424993,9.683904],[47.424993,9.683904],[47.424986,9.684636],[47.424968,9.685396],[47.424952,9.685619],[47.424925,9.685794],[47.424889,9.685957],[47.424788,9.686291],[47.424618,9.686687],[47.424344,9.687212],[47.424271,9.687368],[47.424198,9.687559],[47.42411,9.687888],[47.424073,9.688091],[47.423973,9.68894],[47.423944,9.689113],[47.42389,9.689359],[47.423313,9.691545],[47.422486,9.691482],[47.422284,9.691452],[47.421674,9.691336],[47.421022,9.691188],[47.421022,9.691188],[47.420716,9.691118],[47.420135,9.691017],[47.419865,9.690959],[47.417778,9.690278],[47.41779,9.689958],[47.417769,9.689803],[47.4177,9.689703],[47.417602,9.689649],[47.416471,9.689322],[47.416386,9.689255],[47.416344,9.689003],[47.416289,9.688762],[47.416261,9.688582],[47.416253,9.688474],[47.416254,9.688357],[47.416594,9.686069],[47.416625,9.685963],[47.416693,9.685855],[47.416758,9.685794],[47.416961,9.68568],[47.417018,9.68566],[47.416937,9.685578],[47.416686,9.685393],[47.416596,9.685367],[47.41646,9.685396],[47.416242,9.685537],[47.416167,9.685569],[47.415614,9.685705],[47.415524,9.685715],[47.415456,9.685713],[47.41539,9.685696],[47.415771,9.68349],[47.415771,9.68349],[47.415771,9.68349],[47.41539,9.685696],[47.415297,9.685656],[47.414899,9.685628],[47.414275,9.685535],[47.41383,9.685788],[47.4135,9.685957],[47.413252,9.686113],[47.412929,9.68629],[47.412739,9.68637],[47.412446,9.686523],[47.412343,9.686553],[47.41186,9.686636],[47.41172,9.686718],[47.411568,9.686848],[47.411485,9.686881],[47.411424,9.686895],[47.411353,9.686897],[47.411065,9.686891],[47.411057,9.687169]];
+
+    if (window.L && document.getElementById('map')) {
+        const map = L.map('map', { scrollWheelZoom: false }).setView([47.417, 9.683], 14);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            subdomains: 'abcd',
+            maxZoom: 19,
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        const cs = getComputedStyle(document.documentElement);
+        const forestColor = cs.getPropertyValue('--forest-deep').trim() || '#1b2f1a';
+        const terraColor = cs.getPropertyValue('--terracotta').trim() || '#c2562b';
+
+        const byuLine = L.polyline(BYU_COORDS, { color: forestColor, weight: 5, opacity: 0.9, lineCap: 'round', lineJoin: 'round' });
+        const miniLine = L.polyline(MINI_COORDS, { color: terraColor, weight: 5, opacity: 0.9, lineCap: 'round', lineJoin: 'round' });
+
+        const startIcon = L.divIcon({
+            className: 'start-marker',
+            html: '<div style="width:16px;height:16px;border-radius:50%;background:'+terraColor+';border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.3);"></div>',
+            iconSize: [16, 16],
+            iconAnchor: [8, 8]
+        });
+        L.marker(BYU_COORDS[0], { icon: startIcon }).addTo(map).bindPopup('Start / Ziel · Vetterhof');
+
+        let currentLoop = 'byu';
+        byuLine.addTo(map);
+        setTimeout(() => { map.invalidateSize(); map.fitBounds(byuLine.getBounds(), { padding: [30, 30] }); }, 200);
+
+        const loopTitle = document.getElementById('loopTitle');
+        const loopDesc = document.getElementById('loopDesc');
+        const loopDist = document.getElementById('loopDist');
+        const loopDownload = document.getElementById('loopDownload');
+
+        const updateLoopText = () => {
+            const lang = document.documentElement.lang === 'en' ? 'en' : 'de';
+            const txt = loopDesc.getAttribute(`data-${lang}-${currentLoop}`);
+            if (txt) loopDesc.textContent = txt;
+        };
+
+        const showLoop = (which) => {
+            currentLoop = which;
+            if (which === 'byu') {
+                if (map.hasLayer(miniLine)) map.removeLayer(miniLine);
+                byuLine.addTo(map);
+                map.fitBounds(byuLine.getBounds(), { padding: [30, 30] });
+                loopTitle.textContent = 'BYU Loop';
+                loopDist.textContent = '6.706 km';
+                loopDownload.href = 'assets/gpx/byu-lustenau-loop-6.706km.gpx';
+            } else {
+                if (map.hasLayer(byuLine)) map.removeLayer(byuLine);
+                miniLine.addTo(map);
+                map.fitBounds(miniLine.getBounds(), { padding: [30, 30] });
+                loopTitle.textContent = 'Mini BYU Loop';
+                loopDist.textContent = '5 km';
+                loopDownload.href = 'assets/gpx/byu-lustenau-mini-loop-5km.gpx';
+            }
+            updateLoopText();
+            document.querySelectorAll('#loopToggle button').forEach(b => {
+                b.classList.toggle('active', b.dataset.loop === which);
+            });
+        };
+
+        document.querySelectorAll('#loopToggle button').forEach(btn => {
+            btn.addEventListener('click', () => showLoop(btn.dataset.loop));
+        });
+
+        // Re-sync description when language changes
+        document.querySelectorAll('.lang-switch button').forEach(b => {
+            b.addEventListener('click', () => setTimeout(updateLoopText, 0));
+        });
+    }
+
+    // Mobile menu
+    const navToggle = document.getElementById('navToggle');
+    const mobileMenu = document.getElementById('mobileMenu');
+    const closeMenu = () => { mobileMenu.classList.remove('open'); navToggle.textContent = '☰'; };
+    navToggle.addEventListener('click', () => {
+        const open = mobileMenu.classList.toggle('open');
+        navToggle.textContent = open ? '×' : '☰';
+    });
+    mobileMenu.querySelectorAll('a').forEach(a => a.addEventListener('click', closeMenu));
+    // Close on ESC
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenu(); });
+    // Close on click outside menu (but not on the toggle button itself)
+    document.addEventListener('click', (e) => {
+        if (!mobileMenu.classList.contains('open')) return;
+        if (mobileMenu.contains(e.target) || navToggle.contains(e.target)) return;
+        closeMenu();
+    });
+
+    // Nav scroll
+    const nav = document.getElementById('nav');
+    window.addEventListener('scroll', () => {
+        nav.classList.toggle('scrolled', window.scrollY > 30);
+    });
+
+    // Reveal on scroll
+    const io = new IntersectionObserver((entries) => {
+        entries.forEach(e => {
+            if (e.isIntersecting) {
+                e.target.classList.add('in');
+                io.unobserve(e.target);
+            }
+        });
+    }, { threshold: 0.12, rootMargin: '0px 0px -60px 0px' });
+    document.querySelectorAll('.reveal, .reveal-stagger').forEach(el => io.observe(el));
+
+    // FAQ accordion
+    document.querySelectorAll('.faq-q').forEach(btn => {
+        btn.addEventListener('click', () => {
+            btn.parentElement.classList.toggle('open');
+        });
+    });
+
+    // Language switch
+    const langBtns = document.querySelectorAll('.lang-switch button');
+    const setLang = (lang) => {
+        document.documentElement.lang = lang;
+        document.querySelectorAll('[data-de]').forEach(el => {
+            const txt = el.getAttribute('data-' + lang);
+            if (txt) el.textContent = txt;
+        });
+        langBtns.forEach(b => b.classList.toggle('active', b.dataset.lang === lang));
+        try { localStorage.setItem('byu-lang', lang); } catch(e) {}
+    };
+    langBtns.forEach(b => b.addEventListener('click', () => setLang(b.dataset.lang)));
+    try {
+        const saved = localStorage.getItem('byu-lang');
+        if (saved === 'en') setLang('en');
+    } catch(e) {}
+
+    // ---------- DEBUG PALETTE SWITCHER ----------
+    const palettes = [
+        {
+            name: 'Vetterhof (default)',
+            vars: { '--bg':'#f6f1e7','--bg-warm':'#efe6d2','--ink':'#1d2419','--ink-soft':'#4a513f','--muted':'#7a7666','--line':'#d9cfb8','--forest':'#2d4a2b','--forest-deep':'#1b2f1a','--moss':'#5a7a3e','--terracotta':'#c2562b','--terracotta-deep':'#963f1c','--gold':'#d6a74a','--cream':'#fbf8f0' }
+        },
+        {
+            name: 'Alpine Dawn',
+            vars: { '--bg':'#f3eee5','--bg-warm':'#e8dfd0','--ink':'#1c2230','--ink-soft':'#3e4759','--muted':'#7c8290','--line':'#d4cdbc','--forest':'#2b3f5c','--forest-deep':'#15203a','--moss':'#5a7595','--terracotta':'#d96a3c','--terracotta-deep':'#a64a23','--gold':'#e5b455','--cream':'#fbf8f0' }
+        },
+        {
+            name: 'Forest Trail',
+            vars: { '--bg':'#f0ebe0','--bg-warm':'#e3dac5','--ink':'#1a201a','--ink-soft':'#3f4a3a','--muted':'#727160','--line':'#cdc4ad','--forest':'#1f3a1c','--forest-deep':'#0e220c','--moss':'#587a3a','--terracotta':'#a8531e','--terracotta-deep':'#7a3b13','--gold':'#c89a3d','--cream':'#f8f5e9' }
+        },
+        {
+            name: 'Sunburn',
+            vars: { '--bg':'#fbf3e6','--bg-warm':'#f3e5c8','--ink':'#251612','--ink-soft':'#553a30','--muted':'#86705f','--line':'#e3d3b3','--forest':'#5c2d18','--forest-deep':'#3a1808','--moss':'#a66236','--terracotta':'#e0682c','--terracotta-deep':'#a8451a','--gold':'#f0b04a','--cream':'#fff9ec' }
+        },
+        {
+            name: 'Nordic Cold',
+            vars: { '--bg':'#eef0ee','--bg-warm':'#dee3e0','--ink':'#1a1f1d','--ink-soft':'#3b4642','--muted':'#737a76','--line':'#c9d0cb','--forest':'#1f4239','--forest-deep':'#0e2620','--moss':'#3e6e60','--terracotta':'#b94a3d','--terracotta-deep':'#8a3025','--gold':'#c4a657','--cream':'#fafbf9' }
+        },
+        {
+            name: 'Mono Forest',
+            vars: { '--bg':'#f4f4f1','--bg-warm':'#e7e7e0','--ink':'#0f120e','--ink-soft':'#3a3d36','--muted':'#73766c','--line':'#d2d2c9','--forest':'#1f2a1d','--forest-deep':'#0c140a','--moss':'#4a5a3a','--terracotta':'#1f2a1d','--terracotta-deep':'#0c140a','--gold':'#a8a89a','--cream':'#fbfbf8' }
+        },
+        {
+            name: 'Vintage Race',
+            vars: { '--bg':'#f5ede0','--bg-warm':'#ecdfc6','--ink':'#1a1614','--ink-soft':'#4a3e34','--muted':'#7d705f','--line':'#dcccab','--forest':'#3a2418','--forest-deep':'#1f1208','--moss':'#7a5530','--terracotta':'#c43a2c','--terracotta-deep':'#8a2218','--gold':'#e8b942','--cream':'#fcf6e8' }
+        },
+        {
+            name: 'Wild Olive',
+            vars: { '--bg':'#f4f0e2','--bg-warm':'#e8e1c5','--ink':'#1d1f15','--ink-soft':'#454730','--muted':'#7a7855','--line':'#d4cca5','--forest':'#4a5024','--forest-deep':'#2a2e10','--moss':'#7a8438','--terracotta':'#c25a2b','--terracotta-deep':'#943f18','--gold':'#d4a83a','--cream':'#faf6e8' }
+        },
+        {
+            name: 'Midnight Run',
+            vars: { '--bg':'#1a1d24','--bg-warm':'#252932','--ink':'#f5f3ed','--ink-soft':'#b8b5ab','--muted':'#7a7a78','--line':'#3a3f48','--forest':'#5d8c4a','--forest-deep':'#3a5a2c','--moss':'#7da855','--terracotta':'#e87545','--terracotta-deep':'#b8542a','--gold':'#e5b455','--cream':'#1a1d24' }
+        },
+        {
+            name: 'Pure White',
+            vars: { '--bg':'#ffffff','--bg-warm':'#f4f4f2','--ink':'#0a0f0a','--ink-soft':'#3a4238','--muted':'#7a8076','--line':'#e5e5e2','--forest':'#1f4220','--forest-deep':'#0c2410','--moss':'#4a7240','--terracotta':'#d54f24','--terracotta-deep':'#a13818','--gold':'#e0a838','--cream':'#ffffff' }
+        },
+        {
+            name: 'Soft Mint',
+            vars: { '--bg':'#eef5ee','--bg-warm':'#dfecdf','--ink':'#0e1f12','--ink-soft':'#36493a','--muted':'#6d7d70','--line':'#cbdccd','--forest':'#1f5232','--forest-deep':'#0b2e18','--moss':'#3e7a4e','--terracotta':'#dc5a2d','--terracotta-deep':'#a23a16','--gold':'#e3b342','--cream':'#f7fbf7' }
+        },
+        {
+            name: 'Sky Blue',
+            vars: { '--bg':'#eaf2f8','--bg-warm':'#d8e7f0','--ink':'#0f1a24','--ink-soft':'#37485a','--muted':'#6e7d8e','--line':'#c4d5e2','--forest':'#1c4670','--forest-deep':'#0a2540','--moss':'#3a6a96','--terracotta':'#e26139','--terracotta-deep':'#b2421d','--gold':'#f0b945','--cream':'#f5fafe' }
+        },
+        {
+            name: 'Stone Gray',
+            vars: { '--bg':'#f0f0ee','--bg-warm':'#e0e0dd','--ink':'#16181a','--ink-soft':'#3d4145','--muted':'#787c80','--line':'#cdcdc9','--forest':'#2a3b3f','--forest-deep':'#121d20','--moss':'#52676b','--terracotta':'#d65733','--terracotta-deep':'#9f3a1c','--gold':'#d4a93f','--cream':'#fafaf8' }
+        },
+        {
+            name: 'Sage & Coral',
+            vars: { '--bg':'#f3f5ee','--bg-warm':'#e6ead9','--ink':'#16201a','--ink-soft':'#3e4a3c','--muted':'#7a8273','--line':'#d2d8c0','--forest':'#3d5a3e','--forest-deep':'#1f3520','--moss':'#6a8a5a','--terracotta':'#e57258','--terracotta-deep':'#b04632','--gold':'#e8b96b','--cream':'#fafbf4' }
+        },
+        {
+            name: 'Slate Pop',
+            vars: { '--bg':'#f5f6f8','--bg-warm':'#e6e9ed','--ink':'#0e1116','--ink-soft':'#363b45','--muted':'#737984','--line':'#d3d7dd','--forest':'#1c2230','--forest-deep':'#0a0e16','--moss':'#3d4a60','--terracotta':'#ff5a3c','--terracotta-deep':'#cc3a1f','--gold':'#ffc23a','--cream':'#ffffff' }
+        },
+        {
+            name: 'Bauhaus',
+            vars: { '--bg':'#f2eee4','--bg-warm':'#e4dec9','--ink':'#111111','--ink-soft':'#3a3a3a','--muted':'#7a7a7a','--line':'#d0cabb','--forest':'#1a3a8a','--forest-deep':'#0a1f4d','--moss':'#3a5cc4','--terracotta':'#e63946','--terracotta-deep':'#a8222d','--gold':'#f4c430','--cream':'#fbf8f0' }
+        },
+        {
+            name: 'Glacier',
+            vars: { '--bg':'#f0f4f6','--bg-warm':'#dde6ea','--ink':'#0f1518','--ink-soft':'#384246','--muted':'#73808a','--line':'#c9d4d9','--forest':'#155264','--forest-deep':'#06303d','--moss':'#2f7d92','--terracotta':'#e8693a','--terracotta-deep':'#a8401a','--gold':'#e8c64a','--cream':'#f9fcfd' }
+        },
+        {
+            name: 'Lustenau Sport',
+            vars: { '--bg':'#f7f7f5','--bg-warm':'#ebebe7','--ink':'#0d0f12','--ink-soft':'#363a40','--muted':'#777a80','--line':'#dadad6','--forest':'#003d6b','--forest-deep':'#001f3d','--moss':'#1565a0','--terracotta':'#e63946','--terracotta-deep':'#a8222d','--gold':'#fcbf49','--cream':'#ffffff' }
+        }
+    ];
+
+    const debugPanel = document.getElementById('debugPanel');
+    const debugList = document.getElementById('debugList');
+    const debugClose = document.getElementById('debugClose');
+    let activePalette = 0;
+
+    const applyPalette = (idx) => {
+        activePalette = idx;
+        const p = palettes[idx];
+        Object.entries(p.vars).forEach(([k,v]) => document.documentElement.style.setProperty(k, v));
+        debugList.querySelectorAll('.debug-item').forEach((el,i) => el.classList.toggle('active', i === idx));
+        try { localStorage.setItem('byu-palette-v2', String(idx)); } catch(e) {}
+    };
+
+    palettes.forEach((p, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'debug-item';
+        btn.innerHTML = `
+            <div class="debug-swatches">
+                <span style="background:${p.vars['--bg']}"></span>
+                <span style="background:${p.vars['--forest']}"></span>
+                <span style="background:${p.vars['--terracotta']}"></span>
+                <span style="background:${p.vars['--gold']}"></span>
+            </div>
+            <span class="debug-name">${p.name}</span>
+        `;
+        btn.addEventListener('click', () => applyPalette(i));
+        debugList.appendChild(btn);
+    });
+
+    const toggleDebug = () => debugPanel.classList.toggle('open');
+    debugClose.addEventListener('click', toggleDebug);
+    document.addEventListener('keydown', (e) => {
+        if (e.shiftKey && (e.key === 'D' || e.key === 'd')) {
+            e.preventDefault();
+            toggleDebug();
+        }
+    });
+    if (new URLSearchParams(location.search).has('debug')) debugPanel.classList.add('open');
+
+    const defaultPaletteIdx = palettes.findIndex(p => p.name === 'Pure White');
+    try {
+        localStorage.removeItem('byu-palette'); // clear legacy key
+        const saved = localStorage.getItem('byu-palette-v2');
+        applyPalette(saved !== null ? parseInt(saved, 10) : defaultPaletteIdx);
+    } catch(e) {
+        applyPalette(defaultPaletteIdx);
+    }
+
+    // Subtle parallax on hero visual
+    const heroVisual = document.querySelector('.hero-visual');
+    if (heroVisual && window.matchMedia('(min-width: 960px)').matches) {
+        window.addEventListener('scroll', () => {
+            const y = window.scrollY;
+            if (y < 800) heroVisual.style.transform = `rotate(${2 - y * 0.005}deg) translateY(${y * 0.08}px)`;
+        });
+    }
+</script>
+</body>
+</html>
